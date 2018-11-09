@@ -5,7 +5,7 @@ Batch](https://azure.microsoft.com/services/batch/) pools and Azure CycleCloud
 clusters that you can use to run benchmarks for common high-performance
 computing (HPC) applications. This repo also serves as a catalog of HPC
 applications that you can use for benchmark testing. More than a dozen common
-HPC applications are currently supported, including several ANSYS simulators and
+HPC applications are currently supported, including several ANSYS solvers and
 Star-CCM+, and you can add more as needed as described in this guide.
 
 | Build Images | Run Jobs |
@@ -72,7 +72,7 @@ networking.
 
 CycleCloud is cluster manager software that requires a one-time license. The
 CycleCloud application server must be provisioned separately, a step that is
-automated by the [deployment template](https://github.com/az-cat/AzHPC-AppCat).
+automated by the [deployment template](https://github.com/az-cat/az-hpcapps).
 
 CycleCloud also installs and configures a scheduler—GridEngine in this case. You
 can use the automation scripts to set up two types of environments:
@@ -96,12 +96,14 @@ Before using these scripts, do the following:
     running Bash on Windows, follow these
     [instructions](https://www.michaelcrump.net/azure-cli-with-win10-bash/).
 
+> NOTE : You can also use [Cloud Shell](https://azure.microsoft.com/en-us/features/cloud-shell/) which is an easy way to start faster
+
 2.  Install [Packer](https://www.packer.io/docs/install/index.html). Copy
-    packer.exe to the directory specified in config.json for Packer.
+    packer.exe to the directory specified in **config.json** for Packer.
 
 3.  Install [jq](https://stedolan.github.io/jq/download/).
 
-4.  *Optional*. Install [Batch Labs](https://github.com/Azure/BatchExplorer) for
+4.  *Optional*. Install [Batch Explorer](https://github.com/Azure/BatchExplorer) for
     scaling your Azure Batch pools.
 
 5.  Clone the repo:
@@ -265,6 +267,11 @@ config.json file with your values as explained in the sections below.
     },
     "infrastructure": {
         "nfsserver": "10.0.2.4",
+        "nfsmount": "/data",
+        "beegfs": {
+            "mgmt":"x.x.x.x",
+            "mount":"/beegfs"
+        },
         "licserver": "",
         "network": {
             "resource_group": "",
@@ -529,7 +536,7 @@ To run benchmarks for a specific HPC application, do the following:
 
 3.  After the Azure Batch pool is created, scale it to the number of nodes you
     want to run on. (Note that CycleCloud does this automatically). To scale a
-    pool, use Azure portal or [Batch Labs](https://github.com/Azure/BatchLabs).
+    pool, use Azure portal or [Batch Explorer](https://github.com/Azure/BatchExplorer).
 
 4.  Run the HPC application you want to benchmark as the following section
     describes.
@@ -678,6 +685,7 @@ The application catalog is growing regularly, below is the list of what is curre
 - Converge CFD
 - GAMMES
 - LAMMPS
+- Linpack
 - NAMD
 - NWChem
 - OpenFoam

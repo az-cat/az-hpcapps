@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+"parameters": {
+    "cycleCloudVersion": { "value": "_CCVER_" },
+    "username" : {"value": "_USERNAME_"},
+    "password" : {"value": "_CCPW_"},
+    "SSH Public Key": { "value": "_SSHKEY_"},
+    "applicationSecret": {"value": "_APPSECRET_"},
+    "tenantId": {"value": "_TENANTID_"},
+    "applicationId": {"value": "_APPID_"},
+    "subnetName": {"value": "_SUBNET_"},
+    "vnetName": {"value": "_VNET_"},
+    "vnetRG": {"value": "_VNETRG_"}
+  }
+}
+

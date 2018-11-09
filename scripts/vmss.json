@@ -1,0 +1,183 @@
+{
+"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "vmSku": {
+        "defaultValue": "Standard_H16r",
+        "allowedValues": [
+            "Standard_H16r",
+            "Standard_H16mr",
+            "Standard_NC24r",
+            "Standard_F72s_v2",
+            "Standard_F8s_v2"
+        ],
+        "type": "string",
+        "metadata": {
+            "description": "Which instance would you like to deploy to? Not all VMs are available in all regions"
+        }
+    },
+    "vmssName": {
+        "maxLength": 10,
+        "type": "string",
+        "metadata": {
+            "description": "String used as a base for naming resources. Must be 3-10 characters in length and globally unique across Azure. A hash is prepended to this string for some resources, and resource-specific information is appended."
+        }
+    },
+    "instanceCount": {
+        "maxValue": 50,
+        "type": "int",
+        "metadata": {
+            "description": "Number of VM instances (50 max for custom image)."
+        }
+    },
+    "imageId": {
+        "type": "string",
+        "metadata": {
+            "description": "The image reference id following this format /subscriptions/<subId>/resourceGroups/<ImageRG>/providers/Microsoft.Compute/images/<imageName>"
+        }
+    },
+    "adminUser": {
+        "type": "string",
+        "metadata": {
+            "description": "The admin username."
+        }
+    },
+    "rsaPublicKey": {
+        "type": "string",
+        "metadata": {
+            "description": "The RSA public key of the admin user."
+        }
+    },        
+    "fastNetwork": {
+        "type": "bool",
+        "defaultValue": "false",
+        "metadata": {
+            "description": "Enable Accelerated Networking"
+        }
+    },        
+    "vnetName": {
+        "type": "string",
+        "defaultValue": "hpccatvnet",
+        "metadata": {
+            "description": "Name of the VNET to include the VMs"
+        }
+    },
+    "subnetName": {
+        "type": "string",
+        "defaultValue": "compute",
+        "metadata": {
+            "description": "Name of the subnet of the VNET to add the VMs in"
+        }
+    },
+    "cnscript": {
+        "type": "string",
+        "metadata": {
+            "description": "uri of the compute node setup script"
+        }
+    }
+},
+"variables": {
+    "resourceLocation": "[resourceGroup().location]",
+    "computeApiVersion": "2017-12-01"
+},
+"resources": [
+    {
+    "type": "Microsoft.Compute/virtualMachineScaleSets",
+    "sku": {
+        "name": "[parameters('vmSku')]",
+        "tier": "Standard",
+        "capacity": "[parameters('instanceCount')]"
+    },
+    "name": "[parameters('vmssName')]",
+    "apiVersion": "[variables('computeApiVersion')]",
+    "location": "[variables('resourceLocation')]",
+    "scale": null,
+    "properties": {
+        "singlePlacementGroup": true,
+        "upgradePolicy": {
+            "mode": "Manual",
+            "automaticOSUpgrade": false
+        },
+        "virtualMachineProfile": {
+            "osProfile": {
+                "computerNamePrefix": "CN",
+                "adminUsername": "[parameters('adminUser')]",
+                "linuxConfiguration": {
+                    "disablePasswordAuthentication": true,
+                    "ssh": {
+                        "publicKeys": [
+                            {
+                                "path": "[concat('/home/',parameters('adminUser'),'/.ssh/authorized_keys')]",
+                                "keyData": "[parameters('rsaPublicKey')]"
+                            }
+                        ]
+                    }
+                },
+                "secrets": []
+            },
+            "storageProfile": {
+                "osDisk": {
+                    "createOption": "FromImage",
+                    "caching": "ReadWrite",
+                    "managedDisk": {
+                        "storageAccountType": "Standard_LRS"
+                    }
+                },
+                "imageReference": {
+                    "id": "[parameters('imageId')]"
+                }
+            },
+            "networkProfile": {
+                "networkInterfaceConfigurations": [
+                    {
+                        "name": "[concat(parameters('vmssName'),'Nic')]",
+                        "properties": {
+                            "primary": true,
+                            "enableAcceleratedNetworking": "[parameters('fastNetwork')]",
+                            "dnsSettings": {
+                                "dnsServers": []
+                            },
+                            "enableIPForwarding": false,
+                            "ipConfigurations": [
+                                {
+                                    "name": "[concat(parameters('vmssName'),'IpConfig')]",
+                                    "properties": {
+                                        "subnet": {
+                                            "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+                                        },
+                                        "privateIPAddressVersion": "IPv4"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "extensionProfile": {
+                "extensions": [
+                    {
+                        "name": "installNode",
+                        "properties": {
+                            "publisher": "Microsoft.Azure.Extensions",
+                            "type": "CustomScript",
+                            "typeHandlerVersion": "2.0",
+                            "autoUpgradeMinorVersion": true,
+                            "settings": {
+                                "fileUris": [
+                                    "[parameters('cnscript')]"
+                                ],
+                                "commandToExecute": "bash cn-setup.sh"
+                            }
+                        }
+                    }
+                ]
+            },
+            "priority": "Regular"
+        },
+        "overprovision": true
+    },
+    "dependsOn": [
+    ]
+    }
+]
+}

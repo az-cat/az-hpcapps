@@ -1,0 +1,262 @@
+################################
+## Cluster Configuration File ##
+################################
+
+[parameters General Settings]
+Order = 10
+
+    [[parameters Cloud Service Provider Configuration]]
+    Description = Configure the Cloud Provider account options.
+    Order = 10
+
+        [[[parameter CloudProvider]]]
+        Label = Cloud Provider
+        ParameterType = Cloud.Provider
+        DefaultValue = azure
+        Hidden = true
+
+        [[[parameter Credentials]]]
+        Description = The credentials for the cloud provider
+        ParameterType = Cloud.Credentials
+
+        [[[parameter Region]]]
+        Label = Region
+        Description = Deployment Location
+        ParameterType = Cloud.Region
+        DefaultValue = northcentralus
+
+[parameters App Catalog]
+Order = 15
+
+    [[parameters App Catalog Settings]]
+    Description = "Specify settings for the App Catalog."
+    Order = 10
+
+        [[[parameter LicenseServer]]]
+        Label =  LicenseServer IP 
+        Description = IP Address of the license server
+        Required = True
+        DefaultValue = 10.0.0.4
+
+        [[[parameter NFSServerIP]]]
+        Label =  NFSServerIP 
+        Description = IP Address of the NFS server
+        Required = True
+        DefaultValue = 10.0.2.4
+
+        [[[parameter ImageResourceGroup]]]
+        Label =  ImageRG 
+        Description = Resource group of images
+        Required = True
+        DefaultValue = AZCAT-IMAGES-NCUS 
+
+[parameters Applications]
+Order = 20
+
+    [[parameters Software]]
+    Description = "Specify the scheduling software, and base OS installed on all nodes, and optionally the cluster-init and chef versions from your Locker."
+    Order = 10
+
+        [[[parameter DefaultImage]]]
+        Label = Defaulti Image
+        ParameterType = Cloud.Image
+        Config.OS = linux
+        DefaultValue = cycle.image.centos7
+
+    [[parameters Node Access]]
+    Description = "Specify the credentials required for access to the node.  The Keypair Path specifies the path on local machines for cyclecloud CLI access."
+    Order = 20
+
+        [[[parameter keypairLocation]]]
+        Label = Keypair Path
+        Description = The path to the keypair
+        DefaultValue = ~/.ssh/cyclecloud.pem
+        Required = True
+
+[parameters Compute Backend]
+Order = 30
+
+    [[parameters Instance Types]]
+    Description = "The cluster, in this case, has two roles: the scheduler master-node with shared filer and the execute hosts. Configure which instance types to use based on the requirements of your application."
+    Order = 10
+
+        [[[parameter MasterMachineType]]]
+        Label = Master Type
+        Description = The machine type for scheduler master and shared filer.
+        ParameterType = Cloud.MachineType
+            [[[[record Config.ProviderDefaults]]]]
+            Azure = Standard_D8_v3
+
+        [[[parameter ExecuteMachineType]]]
+        Label = Execute Type
+        Description = The machine type for execute nodes
+        ParameterType = Cloud.MachineType
+            [[[[record Config.ProviderDefaults]]]]
+            Azure = Standard_H16r
+
+    [[parameters Auto-Scaling]]
+    Description = "The cluster can autoscale to the workload, adding execute hosts as jobs are queued. To enable this check the box below and choose the initial and maximum core counts for the cluster"
+    Order = 20
+
+        [[[parameter InitialExecuteCoreCount]]]
+        Label = Initial Cores
+        Description = The number of execute cores to launch on startup
+        DefaultValue = 0
+        Config.Plugin = pico.form.NumberTextBox
+        Config.MinValue = 0
+        Config.MaxValue = 5000
+        Config.IntegerOnly = true
+
+        [[[parameter MaxExecuteCoreCount]]]
+        Label = Max Cores
+        Description = The total number of execute cores to start
+        DefaultValue = 10
+        Config.Plugin = pico.form.NumberTextBox
+        Config.MinValue = 1
+        Config.MaxValue = 5000
+        Config.IntegerOnly = true
+
+    [[parameters Azure Low Priority]]
+    Description = "To use low priority instances check the box, otherwise on-demand instances will be used"
+    Conditions.Excluded := CloudProvider !== "Azure"
+    Order = 30
+
+        [[[parameter UseLowPrio]]]
+        Label = Use Low Prio Instances
+        DefaultValue = false
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Use low priority instances for execute hosts
+
+        [[[parameter BatchAccount]]]
+        Label = AzureBatch Account
+        Conditions.Excluded := UseLowPrio isnt true        
+
+[parameters Networking]
+Order = 40
+
+    [[parameters General]]
+    Order = 10
+
+        [[[parameter ReturnProxy]]]
+        Label = Return Proxy
+        DefaultValue = true
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Allow cloud instances to report back their state
+
+        [[[parameter MasterPublicIp]]]
+        Label = Master has Public IP
+        DefaultValue = true
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Assign a public ip address to the master node
+
+    [[parameters Virtual Network Configuration]]
+    Order = 40
+    Conditions.Excluded := CloudProvider !== "Azure"
+
+        [[[parameter MasterSubnetId]]]
+        Label = Master Subnet 
+        Description = Subnet Resource Path (ResourceGroup/VirtualNetwork/Subnet)
+        DefaultValue = azcathpcncusrg/hpcvnet/admin
+
+        [[[parameter ComputeSubnetId]]]
+        Label = Compute Subnet 
+        Description = Subnet Resource Path (ResourceGroup/VirtualNetwork/Subnet)
+        DefaultValue = azcathpcncusrg/hpcvnet/compute
+
+        [[[parameter ComputeSubnet]]]
+        Label = Compute CIDR
+        Description = Address range of the compute Subnet
+
+
+[cluster appcatalog]
+    FormLayout = selectionpanel
+
+    Autoscale = false
+
+    [[node defaults]]
+    ImageName = $DefaultImage
+
+    Credentials = $Credentials 
+    Region = $Region
+    KeyPairLocation = $keypairLocation
+
+        [[[configuration cyclecloud.mounts.data]]]
+        type = nfs
+        mountpoint = /data
+        export_path = /data
+        address = $NFSServerIP
+
+        [[[configuration appcatalog]]]
+        compute_subnet = $ComputeSubnet
+        image_resource_group = $ImageResourceGroup
+
+        [[[cluster-init appcatalog:default:1.0.0]]]
+
+
+    [[node master]]
+    # Default timeout is 15 min.   Set it to 45 min. in VPCx
+    MachineType = $MasterMachineType
+    SubnetId = $MasterSubnetId
+    IsReturnProxy = true 
+
+        [[[volume nfs-vol1]]]
+        Size = 512
+        SSD = True
+        Mount = nfs
+
+        [[[volume nfs-vol2]]]
+        Size = 512
+        SSD = True
+        Mount = nfs
+
+        [[[configuration cyclecloud.mounts.nfs]]]
+        mountpoint = /mnt/exports
+        fs_type = ext4
+        raid_level = 0
+
+        [[[cluster-init cyclecloud/gridengine:master]]]
+        [[[cluster-init appcatalog:master:1.0.0]]]
+
+        [[[network-interface eth0]]]
+        AssociatePublicIpAddress = true
+
+    [[node executedefaults]]
+    Abstract = true
+    MachineType = $ExecuteMachineType
+    SubnetId = $ComputeSubnetId
+
+    InstallJetpack = true
+    JetpackPlatform = centos-7
+    AwaitInstallation = true
+    ImageOS = linux
+
+    Azure.SinglePlacementGroup = true
+
+        # Enable job user to access VM metadata
+        # VM metadata is sent to log analytics  
+        [[[configuration cyclecloud.node]]]
+        prevent_metadata_access = False
+
+        [[[configuration cyclecloud.mounts.shared]]]
+        type = nfs
+        mountpoint = /shared
+        export_path = /mnt/exports/shared
+        #options = defaults,proto=tcp,rsize=65536,wsize=65536
+
+        [[[configuration cyclecloud.cluster.autoscale]]]
+        stop_enabled = true
+        idle_time_after_jobs = 900
+        idle_time_before_jobs = 1800
+
+        [[[cluster-init cyclecloud/gridengine:execute]]]
+        [[[cluster-init appcatalog:execute:1.0.0]]]
+
+
+    [[nodearray execute]]
+    Extends = executedefaults
+
+    # The initial number of cores of this type to start when the cluster starts
+    InitialCoreCount= $InitialExecuteCoreCount
+
+    # The maximum number of cores to start when the cluster is configured for autoscaling
+    MaxCoreCount = $MaxExecuteCoreCount

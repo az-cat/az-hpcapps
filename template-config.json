@@ -1,0 +1,70 @@
+{
+    "subscription_id": "NOT-SET",
+    "location": "NOT-SET",
+    "resource_group": "NOT-SET",
+    "packer": {
+        "executable": "NOT-SET",
+        "base_image": "NOT-SET"
+    },
+    "service_principal": {
+        "name": "NOT-SET",
+        "tenant_id": "NOT-SET",
+        "client_id": "NOT-SET",
+        "client_secret": "NOT-SET"
+    },
+    "images": {
+        "resource_group": "NOT-SET",
+        "storage_account": "NOT-SET",
+        "name": "NOT-SET",
+        "publisher": "NOT-SET",
+        "offer": "NOT-SET",
+        "sku": "NOT-SET",
+        "vm_size": "NOT-SET",
+        "nodeAgentSKUId": "NOT-SET"
+    },
+    "cluster_type": "NOT-SET",
+    "batch": {
+        "resource_group": "NOT-SET",
+        "account_name": "NOT-SET",
+        "storage_account": "NOT-SET",
+        "storage_container": "starttasks"
+    },
+    "cyclecloud": {
+        "resource_group": "NOT-SET",
+        "admin_password": "NOT-SET",
+        "version": "7.5.0",
+        "admin_user": "NOT-SET"
+    },
+    "infrastructure": {
+        "nfsserver": "NOT-SET",
+        "nfsmount": "/data",
+        "beegfs": {
+            "mgmt":"NOT-SET",
+            "mount":"/beegfs"
+        },
+        "licserver": "NOT-SET",
+        "network": {
+            "resource_group": "NOT-SET",
+            "vnet": "NOT-SET",
+            "subnet": "NOT-SET",
+            "admin_subnet": "NOT-SET"
+        },
+        "analytics": {
+            "workspace":"NOT-SET",
+            "key":"NOT-SET"
+        }
+    },
+    "appstorage": {
+        "resource_group": "NOT-SET",
+        "storage_account": "NOT-SET",
+        "app_saskey": "",
+        "app_container": "apps",
+        "data_saskey": "",
+        "data_container": "data"
+    },
+    "results": {
+        "resource_group": "NOT-SET",
+        "storage_account": "NOT-SET",
+        "container": "results"
+    }
+}

@@ -1,0 +1,246 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "adminUser": {
+      "type": "string",
+      "maxLength": 36,
+      "defaultValue": "hpcadmin",
+      "metadata": {
+        "description": "The username of the admin of the VMs created"
+      }
+    },
+    "rsaPublicKey": {
+      "type": "string",
+      "metadata": {
+        "description": "The RSA public key to access the VMs."
+      }
+    },
+    "vnetName": {
+      "maxLength": 32,
+      "type": "string",
+      "metadata": {
+        "description": "Name of the VNET to create"
+      }
+    }
+  },
+  "variables": {
+    "namingInfix": "[toLower(take(uniqueString(resourceGroup().id), 6))]",
+    "resourceLocation": "[resourceGroup().location]",
+    "nfsvmSize": "Standard_D8s_v3",
+    "nfsName": "nfsnode",
+    "nfsNic": "nfs-nic",
+    "nfs_subnet": "admin",
+    "networkApiVersion": "2017-06-01",
+    "computeApiVersion": "2017-03-30"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('vnetName')]",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[variables('resourceLocation')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/20"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "admin",
+            "properties": {
+              "addressPrefix": "10.0.2.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'admin-nsg')]"
+              }
+            }
+          },
+          {
+            "name": "compute",
+            "properties": {
+              "addressPrefix": "10.0.8.0/21"
+            }
+          }
+        ],
+        "virtualNetworkPeerings": []
+      },
+      "dependsOn": [
+        "admin-nsg"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "admin-nsg",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[variables('resourceLocation')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "default-allow-ssh",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound",
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "default-allow-https",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 2000,
+              "direction": "Inbound",
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "default-allow-http",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 3000,
+              "direction": "Inbound",
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ]
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "nfs_ip",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[variables('resourceLocation')]",
+      "properties": {
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Dynamic",
+        "idleTimeoutInMinutes": 4,
+        "dnsSettings": {
+          "domainNameLabel": "[concat('nfs', variables('namingInfix'))]"
+        }
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('nfsName')]",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "location": "[variables('resourceLocation')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('nfsvmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "OpenLogic",
+            "offer": "CentOS",
+            "sku": "7.4",
+            "version": "latest"
+          },
+          "osDisk": {
+            "osType": "Linux",
+            "createOption": "FromImage",
+            "caching": "ReadWrite",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          },
+          "dataDisks": [
+            {
+              "lun": 0,
+              "createOption": "Empty",
+              "caching": "ReadOnly",
+              "managedDisk": {
+                "storageAccountType": "Premium_LRS"
+              },
+              "diskSizeGB": 1023
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('nfsName')]",
+          "adminUsername": "[parameters('adminUser')]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[concat('/home/',parameters('adminUser'),'/.ssh/authorized_keys')]",
+                  "keyData": "[parameters('rsaPublicKey')]"
+                }
+              ]
+            }
+          },
+          "secrets": []
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nfsNic'))]"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[parameters('vnetName')]",
+        "[variables('nfsNic')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nfsNic')]",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[variables('resourceLocation')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'nfs_ip')]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('nfs_subnet'))]"
+              },
+              "primary": true,
+              "privateIPAddressVersion": "IPv4"
+            }
+          }
+        ],
+        "dnsSettings": {},
+        "enableAcceleratedNetworking": true,
+        "enableIPForwarding": false,
+        "primary": true
+      },
+      "dependsOn": [
+        "[parameters('vnetName')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "nfsname": {
+      "type": "string",
+      "value": "[reference('nfs_ip').dnsSettings.fqdn]"
+    }
+  }
+}

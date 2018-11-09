@@ -1,0 +1,18 @@
+{
+  "MasterMachineType" : "Standard_D8s_v3",
+  "MaxExecuteCoreCount" : 256,
+  "DefaultImage" : "cycle.image.centos7",
+  "Region" : "_REGION_",
+  "MasterSubnetId" : "_MASTERSUBNETID_",
+  "ComputeSubnetId" : "_COMPUTESUBNETID_",
+  "ComputeSubnet" : "_COMPUTESUBNET_",
+  "MasterPublicIp" : true,
+  "ExecuteMachineType" : "Standard_H16r",
+  "ClusterUser" : "_USERNAME_",
+  "InitialExecuteCoreCount" : 0,
+  "ReturnProxy" : true,
+  "Credentials" : "azure",
+  "UseLowPrio" : false,
+  "keypairLocation" : "~/.ssh/cyclecloud.pem",
+  "CloudProvider" : "azure"
+}

@@ -1,0 +1,83 @@
+{
+    "id": "#TASK_ID#",
+    "commandLine": "bash -c 'batch_wrapper.sh run_#APP_SCRIPT#.sh #SCRIPT_FLAGS#'",
+    "resourceFiles": [
+        {
+            "blobSource": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#/#APP#/#JOB_ID#/#TASK_ID#/scripts/run_#APP_SCRIPT#.sh?#RESULTS_SASKEY#",
+            "filePath": "run_#APP_SCRIPT#.sh"
+        }, {
+            "blobSource": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#/#APP#/#JOB_ID#/#TASK_ID#/scripts/batch_wrapper.sh?#RESULTS_SASKEY#",
+            "filePath": "batch_wrapper.sh"
+        }
+    ],
+    "outputFiles": [
+        {
+            "filePattern": "../std*.*",
+            "destination": {
+                "container": {
+                    "path": "#APP#/#JOB_ID#/#TASK_ID#/stdout",
+                    "containerUrl": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#?#RESULTS_SASKEY#"
+                }
+            },
+            "uploadOptions": {
+                "uploadCondition": "taskCompletion"
+            }
+        },
+        {
+            "filePattern": "output/*",
+            "destination": {
+                "container": {
+                    "path": "#APP#/#JOB_ID#/#TASK_ID#/output",
+                    "containerUrl": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#?#RESULTS_SASKEY#"
+                }
+            },
+            "uploadOptions": {
+                "uploadCondition": "taskCompletion"
+            }
+        }
+    ],
+    "multiInstanceSettings": {
+        "numberOfInstances": #NUM_NODES#,
+        "coordinationCommandLine": "bash -c hostname"
+    },
+    "userIdentity": {
+        "autoUser": {
+            "scope": "pool",
+            "elevationLevel": "nonadmin"
+        }
+    },
+    "environmentSettings" : [
+        {
+            "name": "APPLICATION",
+            "value": "#APP#"
+        },
+        {
+            "name": "NODES",
+            "value": "#NUM_NODES#"
+        },
+        {
+            "name": "PPN",
+            "value": "#PPN#"
+        },
+        {
+            "name": "LICENSE_SERVER",
+            "value": "#LICSERVER#"
+        },
+        {
+            "name": "SAS_KEY",
+            "value": "#HPC_DATA_SASKEY#"
+        },
+        {
+            "name": "STORAGE_ENDPOINT",
+            "value": "#HPC_DATA_STORAGE_ENDPOINT#"
+        },
+        {
+            "name": "ANALYTICS_WORKSPACE",
+            "value": "#ANALYTICS_WORKSPACE#"
+        },
+        {
+            "name": "ANALYTICS_KEY",
+            "value": "#ANALYTICS_KEY#"
+        }
+    ]
+}

@@ -32,7 +32,6 @@
     "cyclecloud": {
         "resource_group": "NOT-SET",
         "admin_password": "NOT-SET",
-        "version": "7.5.0",
         "admin_user": "NOT-SET"
     },
     "infrastructure": {

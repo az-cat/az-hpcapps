@@ -266,7 +266,7 @@ elif [ "$cluster_type" == "cyclecloud" ]; then
     username=$(whoami)
     PATH=$HOME/bin:$PATH
     read_value cyclecloud_rg .cyclecloud.resource_group
-    read_value cyclecloud_ver .cyclecloud.version
+    cyclecloud_ver="latest"
 
     # 1. Check that the CycleCloud CLI is installed. It not, download and install it
     if ! which cyclecloud > /dev/null ;then
@@ -306,7 +306,7 @@ elif [ "$cluster_type" == "cyclecloud" ]; then
         cyclecloud_fqdn=$(az container show -g $cyclecloud_rg  --name $cyclecloud_container_name  --query "ipAddress.fqdn" | sed 's/\"//g')
         if [ -z $cyclecloud_fqdn ]; then
             while true; do
-                echo "---- Container $cyclecloud_container_name in resource group $cyclecloud_rg not found."
+                echo "---- Azure Container Instance $cyclecloud_container_name in resource group $cyclecloud_rg not found."
                 read -p "    Start Azure container running Cyclecloud? [y/n] " yn
                 case $yn in
                     y )
@@ -322,7 +322,7 @@ elif [ "$cluster_type" == "cyclecloud" ]; then
             cyclecloud_hostname="cyclecloud$hostname_suffix"
 
             az container create -g $cyclecloud_rg --location $location --name $cyclecloud_container_name \
-            --dns-name-label $cyclecloud_hostname  --image jechia/azure-cyclecloud:7.5.0beta  \
+            --dns-name-label $cyclecloud_hostname  --image mcr.microsoft.com/hpc/azure-cyclecloud  \
             --ip-address public --ports 80 443 --cpu 2 --memory 7 \
             -e JAVA_HEAP_SIZE=4096 DNS_NAME=$cyclecloud_hostname LOCATION=$location \
             CYCLECLOUD_AUTOCONFIG=true CYCLECLOUD_ACCEPT_TERMS=true \
@@ -331,35 +331,13 @@ elif [ "$cluster_type" == "cyclecloud" ]; then
 
             cyclecloud_fqdn=$(az container show -g $cyclecloud_rg  --name $cyclecloud_container_name  --query "ipAddress.fqdn" | sed 's/\"//g')
             echo "Waiting for Azure CycleCloud container at $cyclecloud_fqdn to start "
-            until $(curl --connect-timeout 2 --output /dev/null --silent --head --fail https://$cyclecloud_fqdn); do
+            until $(curl -k --connect-timeout 2 --output /dev/null --silent --head --fail https://$cyclecloud_fqdn); do
                 printf "."
                 sleep 10s
             done
             echo ""
             sleep 10s
-            # pushd cyclecloud/ARM/ > /dev/null
-            #     deploy_cyclecloud_params_file=params-cyclecloud.$timestamp.json
 
-            #     replace="s,_VNET_,$vnet,g"
-            #     replace+=";s,_SUBNET_,$admin_subnet,g"
-            #     replace+=";s,_VNETRG_,$vnet_rg,g"
-            #     replace+=";s,_APPID_,$sp_client_id,g"
-            #     replace+=";s,_TENANTID_,$sp_tenant_id,g"
-            #     replace+=";s,_APPSECRET_,$sp_client_secret,g"
-            #     replace+=";s,_CCVER_,$cyclecloud_ver,g"
-            #     replace+=";s,_SSHKEY_,$rsaPublicKey,g"
-            #     replace+=";s,_USERNAME_,$username,g"
-            #     replace+=";s,_CCPW_,$cyclecloud_admin_password,g"
-
-            #     sed  "$replace" params-cyclecloud.json > $deploy_cyclecloud_params_file
-            #     set -x
-            #     set -e
-            #     az group create -n $cyclecloud_rg --location $location 
-            #     az group deployment create --name "Deploy_CycleCloud" --resource-group $cyclecloud_rg --template-file deploy-cyclecloud.json --parameters $deploy_cyclecloud_params_file
-            #     cyclecloud_fqdn=$(az vm list-ip-addresses -g $cyclecloud_rg -n cyclecloud --query "[0].virtualMachine.network.publicIpAddresses[0].ipAddress" | sed 's/\"//g')
-            #     set +x
-            #     set +e
-            # popd > /dev/null
         fi
         cyclecloud_fqdn=$(az container show -g $cyclecloud_rg  --name $cyclecloud_container_name  --query "ipAddress.fqdn" | sed 's/\"//g')
         echo "CycleCloud server found: $cyclecloud_fqdn"
@@ -369,7 +347,7 @@ elif [ "$cluster_type" == "cyclecloud" ]; then
 
         cat > azure_account.json << FILE
 {
-    "AzureEnvironment": "public",
+    "Environment": "public",
     "AzureRMApplicationId": "$sp_client_id",
     "AzureRMApplicationSecret": "$sp_client_secret",
     "AzureRMSubscriptionId": "$subscription_id",
@@ -451,55 +429,12 @@ EOF
             replace+=";s,_COMPUTESUBNETID_,$compute_subnet,g"
             replace+=";s,_COMPUTESUBNET_,$compute_subnet_cidr,g"
 
-            # escape string for sed
-            # echo "Replace string: \"$replace\""
-            # replace=$(sed "s/\&/\\\&/g" <<< "$replace")
             sed  "$replace" appcatalog_gridengine.params.json > $cyclecloud_params_file
             cyclecloud import_cluster $cyclecloud_cluster_name -c appcatalog -p $cyclecloud_params_file -f appcatalog_gridengine.txt
         popd > /dev/null
 
     fi
     cyclecloud start_cluster $cyclecloud_cluster_name
-    # else
-    #     cyclecloud_cluster_name=${app}_gridengine
-    #     if ! cyclecloud show_cluster $cyclecloud_cluster_name ;then
-
-    #         master_subnet="$vnet_rg/$vnet/$admin_subnet"
-    #         compute_subnet="$vnet_rg/$vnet/$subnet"
-    #         compute_subnet_cidr=$(az network vnet subnet list -g $vnet_rg --vnet-name $vnet  --query "[?contains(name,'$subnet')]"  | jq '.[0]["addressPrefix"]' | sed 's/\"//g')
-
-    #         # get vhd for image
-    #         read_value image_rg ".images.resource_group"
-    #         read_value vmsize ".images.vm_size"
-
-    #         image_id=$(az image list \
-    #             --resource-group $image_rg \
-    #             --query "[?contains(name,'$app')].[name,id]" \
-    #             --output tsv \
-    #             | sort | tail -n1 | cut -d$'\t' -f2)
-    #         echo "APP $app image: $image_id"
-
-    #         # create cluster
-    #         pushd $cyclecloud_project_dir/templates/ > /dev/null
-    #             cyclecloud_params_file=$cyclecloud_cluster_name.params.$timestamp.json
-    #             replace="s,_REGION_,$location,g"
-    #             replace+=";s,_MASTERSUBNETID_,$master_subnet,g"
-    #             replace+=";s,_COMPUTESUBNETID_,$compute_subnet,g"
-    #             replace+=";s,_COMPUTESUBNET_,$compute_subnet_cidr,g"
-    #             replace+=";s,_APPIMAGEID_,$image_id,g"
-    #             replace+=";s,_EXEMACHINETYPE_,$vmsize,g"
-
-    #             # escape string for sed
-    #             # echo "Replace string: \"$replace\""
-    #             # replace=$(sed "s/\&/\\\&/g" <<< "$replace")
-    #             sed "$replace" appspecific_gridengine.params.json > $cyclecloud_params_file
-    #             cyclecloud import_cluster $cyclecloud_cluster_name -c appcatalog -p $cyclecloud_params_file -f appspecific_gridengine.txt
-    #         popd > /dev/null
-
-    #     fi
-
-    # fi
-
     echo ""
     echo "--------------------------------------------------------------------------------"
     echo "  Azure CycleCloud "

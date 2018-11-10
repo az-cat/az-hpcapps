@@ -287,19 +287,29 @@ elif [ "$cluster_type" == "cyclecloud" ]; then
     cluster_ip=$(cyclecloud show_nodes master -c appcatalog_gridengine --format json | jq '.[0]["Instance"]["PublicIp"]' | sed 's/\"//g')
     scp ${task_id}.json $cluster_ip:appcatalog/
 
+
+    # images names are tagged with the node Sku
+    get_pool_id $app
+    pool_id=$POOL_ID
+
     read_value image_rg ".images.resource_group"
-    image_vhd=$(az image list \
+    image_id=$(az image list \
         --resource-group $image_rg \
-        --query "[?contains(name,'$app-')].[name,id]" \
+        --query "[?contains(name,'$pool_id-')].[name,id]" \
         --output tsv \
         | sort | tail -n1 | cut -d$'\t' -f2)
-    echo "$app image: $image_vhd"
+    echo "$app image: $image_id"
+
+    if [ -z $image_id ];then
+        echo "Unable to locate image for app $app"
+        exit 1
+    fi
 
     # Machine size defaults to H16r, unless specified
     if [ -z $machine_size ];then
         machine_size="Standard_H16r"
     fi
-    command="submit_azbatch_task.py -a $app -b ~/appcatalog/${task_id}.json -i $image_vhd -p $ppn -n $num_nodes -m $machine_size"
+    command="submit_azbatch_task.py -a $app -b ~/appcatalog/${task_id}.json -i $image_id -p $ppn -n $num_nodes -m $machine_size"
 
     echo "Submmiting job in cluster: "
     echo "$command"

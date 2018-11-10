@@ -1,16 +1,12 @@
-# Benchmark HPC applications on Azure using Azure Batch and Azure CycleCloud
+# Guidance and framework for running HPC application on Azure
 
 This repository provides automation scripts for creating [Azure
 Batch](https://azure.microsoft.com/services/batch/) pools and Azure CycleCloud
-clusters that you can use to run benchmarks for common high-performance
+clusters that you can use to run common high-performance
 computing (HPC) applications. This repo also serves as a catalog of HPC
-applications that you can use for benchmark testing. More than a dozen common
+applications that you can use for testing. More than a dozen common
 HPC applications are currently supported, including several ANSYS solvers and
 Star-CCM+, and you can add more as needed as described in this guide.
-
-| Build Images | Run Jobs |
-|--------------|----------|
-| [![Build status](https://azurecat.visualstudio.com/hpc-apps/_apis/build/status/Empty%20Images)](https://azurecat.visualstudio.com/hpc-apps/_build/latest?definitionId=24) | [![Build status](https://azurecat.visualstudio.com/hpc-apps/_apis/build/status/Empty%20CentOS)](https://azurecat.visualstudio.com/hpc-apps/_build/latest?definitionId=26) |
 
 **In this guide:**
 
@@ -30,20 +26,20 @@ Star-CCM+, and you can add more as needed as described in this guide.
     - [Set up analytics](#set-up-analytics)
     - [Application storage](#application-storage)
     - [Store results](#store-results)
-- [Run application benchmarks](#run-application-benchmarks)
+- [Run application](#run-application)
     - [Set up an HPC application](#set-up-an-hpc-application)
     - [Add an application to the catalog](#add-an-application-to-the-catalog)
-    - [Add benchmarks and test cases](#add-benchmarks-and-test-cases)
+    - [Add test cases](#add-test-cases)
     - [Log data](#log-data)
 - [Collect telemetry data](#collect-telemetry-data)
 
 # Overview
 
-The goal of this repo is to help you set up a benchmarking environment in Azure
+The goal of this repo is to help you set up an environment in Azure
 using either [Azure Batch](https://azure.microsoft.com/services/batch/) pools or
 [Azure CycleCloud](https://cyclecomputing.com/products-solutions/cyclecloud/)
 clusters. These compute job scheduling services connect to an HPC application
-and run it efficiently on Azure so you can perform benchmark tests.
+and run it efficiently on Azure so you can perform tests.
 
 As the following figure shows, this readme describes a three-step approach:
 
@@ -79,7 +75,7 @@ can use the automation scripts to set up two types of environments:
 
 -   A single GridEngine cluster capable of running all the apps in the HPC
     application catalog. Do this when you want to create one environment and use
-    it for benchmarking all the HPC applications. The cluster accepts Azure
+    it for running all the HPC applications. The cluster accepts Azure
     Batch task files and translates them into GridEngine jobs.
 
 -   A GridEngine cluster for a specific HPC application.
@@ -468,7 +464,7 @@ If you have a BeeGFS system setup, you can specify the management IP and the mou
 
 ## Set up analytics
 
-If you want to store the telemetry data collected during the benchmark tests,
+If you want to store the telemetry data collected during the runs,
 you can create an Azure [Log Analytics
 workspace](https://docs.microsoft.com/azure/log-analytics/log-analytics-quick-create-workspace).
 Once in place, update config.json and specify the Log Analytics workspace ID and
@@ -484,7 +480,7 @@ application key from your environment:
 ## Application storage
 
 Application packages are stored in an Azure Storage account that uses one
-container for the HPC application binaries and one container for benchmark
+container for the HPC application binaries and one container for the test
 cases. Each HPC application is listed in a subfolder of the **apps** folder that
 contains both binaries and data. Many applications are already included in the
 repo, but if you do not see the one you want, you can add one as described
@@ -505,7 +501,7 @@ In config.json, update the following:
 
 Application outputs and logs are automatically stored inside blobs within the
 Storage account and container specified in config.json. Specify the location for
-your benchmarking results as follows:
+your results as follows:
 
 ```json
 "results": {
@@ -515,9 +511,9 @@ your benchmarking results as follows:
 }
 ```
 
-# Run application benchmarks
+# Run application
 
-To run benchmarks for a specific HPC application, do the following:
+To run a specific HPC application, do the following:
 
 1.  Build an image for that application by running the following script,
     replacing \<app-name\> with the value documented in the table below:
@@ -538,7 +534,7 @@ To run benchmarks for a specific HPC application, do the following:
     want to run on. (Note that CycleCloud does this automatically). To scale a
     pool, use Azure portal or [Batch Explorer](https://github.com/Azure/BatchExplorer).
 
-4.  Run the HPC application you want to benchmark as the following section
+4.  Run the HPC application you want as the following section
     describes.
 
 ## Set up an HPC application 
@@ -547,11 +543,11 @@ Instructions for setting up, running, and analyzing results for the following
 HPC applications are included in this repo, and more are being added. If the
 application you want is not shown here, see the next section.
 
-| **Application**                                                          | **\<app-name\>**       | **Build Images**           | **Run Jobs**           | **Versions**               |
-|--------------------------------------------------------------------------|------------------------|----------------------------|------------------------|----------------------------|
-| [ANSYS Mechanical](.\documentation\apps\mechanical.md)                   | mechanical             |[![Build status](https://azurecat.visualstudio.com/hpc-apps/_apis/build/status/Mechanical%20Images)](https://azurecat.visualstudio.com/hpc-apps/_build/latest?definitionId=28) | [![Build status](https://azurecat.visualstudio.com/hpc-apps/_apis/build/status/Mechanical%20on%20CentOS)](https://azurecat.visualstudio.com/hpc-apps/_build/latest?definitionId=29) | 18.2   |
-| [ANSYS Fluent](.\documentation\apps\fluent.md)                           | fluent                 |[![Build status](https://azurecat.visualstudio.com/hpc-apps/_apis/build/status/Fluent%20Images)](https://azurecat.visualstudio.com/hpc-apps/_build/latest?definitionId=25)     | [![Build status](https://azurecat.visualstudio.com/hpc-apps/_apis/build/status/Fluent%20Images)](https://azurecat.visualstudio.com/hpc-apps/_build/latest?definitionId=22)          | 18.2   |
-| [Gromacs](.\documentation\apps\gromacs.md)                               | gromacs                |[![Build status](https://azurecat.visualstudio.com/hpc-apps/_apis/build/status/Gromacs%20Images)](https://azurecat.visualstudio.com/hpc-apps/_build/latest?definitionId=31)    | [![Build status](https://azurecat.visualstudio.com/hpc-apps/_apis/build/status/Gromacs%20on%20CentOS)](https://azurecat.visualstudio.com/hpc-apps/_build/latest?definitionId=32)    | 2018.1 |
+| **Application**                                                          | **\<app-name\>**       | **Versions**               |
+|--------------------------------------------------------------------------|------------------------|----------------------------|
+| [ANSYS Mechanical](.\documentation\apps\mechanical.md)                   | mechanical             | 18.2   |
+| [ANSYS Fluent](.\documentation\apps\fluent.md)                           | fluent                 | 18.2   |
+| [Gromacs](.\documentation\apps\gromacs.md)                               | gromacs                | 2018.1 |
 
 ## Add an application to the catalog
 
@@ -588,14 +584,13 @@ folder. To add an application to the catalog:
 > **NOTE:** The `build_image.sh` script replaces `#HPC_APPS_STORAGE_ENDPOINT#`
 > and `#HPC_APPS_SASKEY#` in the install file before it is used.
 
-After you add a new application script, use the steps provided earlier to run
-that benchmark. That is, build the image, create the pools or clusters, then run
+After you add a new application script, use the steps provided earlier to run it. That is, build the image, create the pools or clusters, then run
 the application. Make sure the value of \<app\_name\> in the commands (such as
 `install_<app_name>`) exactly matches the name you used.
 
-## Add benchmarks and test cases
+## Add test cases
 
-New benchmarks or tests must be added to their **app** folder and called
+New tests cases must be added to their **app** folder and called
 `run_<CASE-NAME>.sh`. This script is run after all the resources are ready. The
 following environment variables are available to use:
 

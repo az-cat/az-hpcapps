@@ -1,4 +1,4 @@
-# Airlift tutorial
+# Tutorial
 
 ## Goal
 

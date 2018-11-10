@@ -673,7 +673,7 @@ number of cores and processes per nodes.
 
 # Upcoming applications
 
-The application catalog is growing regularly, below is the list of what is currently in our pipeline :
+The application catalog is growing regularly. Below is the list of what is currently in our pipeline:
 
 - Abaqus
 - Ansys CFX
@@ -688,5 +688,5 @@ The application catalog is growing regularly, below is the list of what is curre
 - Quantum Espresso
 - StarCCM
 
-Send us a note as an issue in the repo if you want to have a need for others applications.
+To request other applications, send us a note as an issue in the repo.
 

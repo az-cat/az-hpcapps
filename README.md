@@ -1,4 +1,4 @@
-# Guidance and framework for running HPC application on Azure
+# Guidance and framework for running HPC applications on Azure
 
 This repository provides automation scripts for creating [Azure
 Batch](https://azure.microsoft.com/services/batch/) pools and Azure CycleCloud

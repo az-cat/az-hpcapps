@@ -54,7 +54,7 @@ As the following figure shows, this readme describes a three-step approach:
     image on demand. You can optionally set up Azure Log Analytics to collect
     telemetry during the testing.
 
-![](./documentation/images/architecture.png)
+![architecture](documentation/images/architecture.png)
 
 ## Azure Batch considerations
 
@@ -516,18 +516,18 @@ your results as follows:
 To run a specific HPC application, do the following:
 
 1.  Build an image for that application by running the following script,
-    replacing \<app-name\> with the value documented in the table below:
+    replacing **app-name** with the value documented in the table below:
 
 ```
-    ./build\_image.sh -a \<app-name\>
+    ./build_image.sh -a app-name
 ```
 
 2.  Create a virtual machine pool for Batch or a cluster for CycleCloud by
-    running the following script, replacing \<app-name\> with the value
+    running the following script, replacing **app-name** with the value
     documented in the [table](#set-up-an-hpc-application) below:
 
 ```
-    ./create\_cluster.sh -a \<app-name\>
+    ./create_cluster.sh -a app-name
 ```
 
 3.  After the Azure Batch pool is created, scale it to the number of nodes you
@@ -543,11 +543,11 @@ Instructions for setting up, running, and analyzing results for the following
 HPC applications are included in this repo, and more are being added. If the
 application you want is not shown here, see the next section.
 
-| **Application**                                                          | **\<app-name\>**       | **Versions**               |
+| **Application**                                                          | **app-name**       | **Versions**               |
 |--------------------------------------------------------------------------|------------------------|----------------------------|
-| [ANSYS Mechanical](.\documentation\apps\mechanical.md)                   | mechanical             | 18.2   |
-| [ANSYS Fluent](.\documentation\apps\fluent.md)                           | fluent                 | 18.2   |
-| [Gromacs](.\documentation\apps\gromacs.md)                               | gromacs                | 2018.1 |
+| [ANSYS Mechanical](./documentation/apps/mechanical.md)                   | mechanical             | 18.2   |
+| [ANSYS Fluent](./documentation/apps/fluent.md)                           | fluent                 | 18.2   |
+| [Gromacs](./documentation/apps/gromacs.md)                               | gromacs                | 2018.1 |
 
 ## Add an application to the catalog
 
@@ -585,7 +585,7 @@ folder. To add an application to the catalog:
 > and `#HPC_APPS_SASKEY#` in the install file before it is used.
 
 After you add a new application script, use the steps provided earlier to run it. That is, build the image, create the pools or clusters, then run
-the application. Make sure the value of \<app\_name\> in the commands (such as
+the application. Make sure the value of **\<app\_name\>** in the commands (such as
 `install_<app_name>`) exactly matches the name you used.
 
 ## Add test cases

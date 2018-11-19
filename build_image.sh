@@ -98,6 +98,8 @@ echo "prepare the install script"
 read_value app_storage_name ".appstorage.storage_account"
 read_value app_container ".appstorage.app_container"
 read_value hpc_apps_saskey ".appstorage.app_saskey"
+read_value licserver ".infrastructure.licserver"
+
 
 if [ "$hpc_apps_saskey" == "" ]; then
     # Create input data SAS KEY
@@ -129,6 +131,7 @@ hpc_apps_storage_endpoint="http://$app_storage_name.blob.core.windows.net/$app_c
 echo "HPC apps storage endpoint is $hpc_apps_storage_endpoint"
 replace="s,#HPC_APPS_STORAGE_ENDPOINT#,$hpc_apps_storage_endpoint,g"
 replace+=";s,#HPC_APPS_SASKEY#,$hpc_apps_saskey,g"
+replace+=";s,#LICSERVER#,$licserver,g"
 # escape string for sed
 echo "Replace string: \"$replace\""
 replace=$(sed "s/\&/\\\&/g" <<< "$replace")

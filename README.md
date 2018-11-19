@@ -444,6 +444,9 @@ used earlier when building the NFS server and virtual network.
 
 If you have a BeeGFS system setup, you can specify the management IP and the mount point (default is **/beegfs**). By default the client version 7.0 is setup inside the images.
 
+> **NOTE:** See this [repo](https://github.com/az-cat/HPC-Filesystems) for reference on how to deploy several parallel filesystem on Azure
+
+
 ```json
 "infrastructure": {
     "nfsserver": "10.0.2.4",
@@ -537,17 +540,29 @@ To run a specific HPC application, do the following:
 4.  Run the HPC application you want as the following section
     describes.
 
+```
+    ./run_app.sh -a app-name \
+            -c config -s script \
+            -n nodes -p process_per_node \
+            -x script_options
+```
+
+
+
 ## Set up an HPC application 
 
 Instructions for setting up, running, and analyzing results for the following
 HPC applications are included in this repo, and more are being added. If the
 application you want is not shown here, see the next section.
 
-| **Application**                                                          | **app-name**       | **Versions**               |
-|--------------------------------------------------------------------------|------------------------|----------------------------|
-| [ANSYS Mechanical](./documentation/apps/mechanical.md)                   | mechanical             | 18.2   |
-| [ANSYS Fluent](./documentation/apps/fluent.md)                           | fluent                 | 18.2   |
-| [Gromacs](./documentation/apps/gromacs.md)                               | gromacs                | 2018.1 |
+| **Application**                                                          | **app-name**       | **Versions**   | **Shared FS** | **Licence** |
+|--------------------------------------------------------------------------|--------------------|----------------|---------------|-------------|
+| [Abaqus](./documentation/apps/abaqus.md)                                 | abaqus             | 2017           |    No         |  Yes        |
+| [ANSYS Mechanical](./documentation/apps/mechanical.md)                   | mechanical         | 18.2           |    No         |  Yes        |
+| [ANSYS Fluent](./documentation/apps/fluent.md)                           | fluent             | 18.2           |    No         |  Yes        |
+| [Gromacs](./documentation/apps/gromacs.md)                               | gromacs            | 2018.1         |    Yes        |  No         |
+| [NAMD](./documentation/apps/namd.md)                                     | namd               | 2.10           |    No         |  No         |
+| [OpenFOAM](./documentation/apps/openfoam.md)                             | openfoam           | 4.x            |    Yes        |  No         |
 
 ## Add an application to the catalog
 
@@ -675,15 +690,12 @@ number of cores and processes per nodes.
 
 The application catalog is growing regularly. Below is the list of what is currently in our pipeline:
 
-- Abaqus
 - Ansys CFX
 - Converge CFD
 - GAMMES
 - LAMMPS
 - Linpack
-- NAMD
 - NWChem
-- OpenFoam
 - Pamcrash
 - Quantum Espresso
 - StarCCM

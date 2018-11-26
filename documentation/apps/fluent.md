@@ -2,8 +2,16 @@
 
 - Application name = **fluent**
 
-#### Setup Steps
+#### Application binaries and data
 
+- upload **FLUIDS_182_LINX64.tar** file to {appstorage.storage_account}/apps/ansys-fluent-18
+- upload **\*.tar** benchmark files (like aircraft_wing_14m.tar) to {appstorage.storage_account}/data/ansys-fluent-benchmarks
+
+#### Setup Steps
+```
+    ./build_image.sh -a fluent
+    ./create_cluster.sh -a fluent
+```
 
 #### Running Benchmarks
 

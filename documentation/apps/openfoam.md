@@ -55,6 +55,18 @@ MPI compilers do not need to be installed.
 
 A binary version has been uploaded and used in the tests.
 
+#### Application binaries and data
+
+- upload **OpenFOAM-4.x_gcc48.tgz** file to {appstorage.storage_account}/apps/openfoam-4-x
+- upload **motorbike\*.tar** benchmark files to {appstorage.storage_account}/data/openfoam-4-x
+
+#### Setup Steps
+
+```
+    ./build_image.sh -a openfoam
+    ./create_cluster.sh -a openfoam
+```
+
 #### OpenFOAM Motorbike Case
 
 A modified verison of the OpenFOAM motorbike tutorial has been used for the test

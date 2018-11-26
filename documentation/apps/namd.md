@@ -41,7 +41,18 @@ To build NAMD:
     MPICXX=mpiicpc ./build charm++ mpi-linux-x86_64 --with-production
     ./config Linux-x86_64-icc-mkl --charm-arch mpi-linux-x86_64 --with-fftw3
 
-The binary is statically linked into a single executable.  This has been put in the `apps` container in storage.
+The binary is statically linked into a single executable.  This has been put in the `apps` container in storage as explained below.
+
+#### Application binaries and data
+
+- upload **namd2** file to {appstorage.storage_account}/apps/namd-2-10
+- upload **namd_stmv_benchmark.tgz** benchmark file to {appstorage.storage_account}/data/namd-2-10
+
+#### Setup Steps
+```
+    ./build_image.sh -a namd
+    ./create_cluster.sh -a namd
+```
 
 #### Submit all tests
 

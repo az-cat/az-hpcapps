@@ -83,7 +83,7 @@ can use the automation scripts to set up two types of environments:
 For more information, see the [CycleCloud User
 Guide](https://docs.cyclecomputing.com/user-guide-launch).
 
-# Prerequisites
+# Fast start
 
 Before using these scripts, do the following:
 
@@ -92,20 +92,23 @@ Before using these scripts, do the following:
     running Bash on Windows, follow these
     [instructions](https://www.michaelcrump.net/azure-cli-with-win10-bash/).
 
-> NOTE : You can also use [Cloud Shell](https://azure.microsoft.com/en-us/features/cloud-shell/) which is an easy way to start faster
+> NOTE : You can also use [Cloud Shell](https://azure.microsoft.com/en-us/features/cloud-shell/) which is the faster way to start
 
-2.  Install [Packer](https://www.packer.io/docs/install/index.html). Copy
-    packer.exe to the directory specified in **config.json** for Packer.
-
-3.  Install [jq](https://stedolan.github.io/jq/download/).
-
-4.  *Optional*. Install [Batch Explorer](https://github.com/Azure/BatchExplorer) for
-    scaling your Azure Batch pools.
-
-5.  Clone the repo:
+2.  Clone the repo:
 ```
     git clone git@github.com:az-cat/az-hpcapps.git
 ```
+
+3. Fill up the configuration file by running the setup script
+```
+    ./setup.sh
+```
+
+4.  Install [Batch Explorer](https://github.com/Azure/BatchExplorer) for monitoring and scaling your Azure Batch pools.
+   
+5.  Now you are ready to start, please jump to [Run application](#run-application)
+
+For details on what is configured see below.
 
 ## Set up NFS server and virtual network
 
@@ -316,8 +319,8 @@ and update the executable value in config.json as follows:
 
 ```json
 "packer": {
-    "executable": "bin/packer.exe",
-    "base_image": "baseimage.sh"
+    "executable": "bin/packer",
+    "base_image": "baseimage-centos.sh"
 }
 ```
 
@@ -444,7 +447,7 @@ used earlier when building the NFS server and virtual network.
 
 If you have a BeeGFS system setup, you can specify the management IP and the mount point (default is **/beegfs**). By default the client version 7.0 is setup inside the images.
 
-> **NOTE:** See this [repo](https://github.com/az-cat/HPC-Filesystems) for reference on how to deploy several parallel filesystem on Azure
+> **NOTE:** See this [repo](https://github.com/paulomarquesc/beegfs-template) for reference on how to deploy BeeGFS on Azure
 
 
 ```json
@@ -563,6 +566,7 @@ application you want is not shown here, see the next section.
 | [Gromacs](./documentation/apps/gromacs.md)                               | gromacs            | 2018.1         |    Yes        |  No         |
 | [NAMD](./documentation/apps/namd.md)                                     | namd               | 2.10           |    No         |  No         |
 | [OpenFOAM](./documentation/apps/openfoam.md)                             | openfoam           | 4.x            |    Yes        |  No         |
+| [nwchem](./documentation/apps/nwchem.md)                                 | nwchem             | 6.8            |    Yes        |  No         |
 
 ## Add an application to the catalog
 

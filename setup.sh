@@ -13,7 +13,7 @@ function usage {
     me=`basename $0`
     echo ""
     echo "Usage:"
-    echo "$me -c config.json -a APPNAME "
+    echo "$me -c config.json -d"
     echo "    -c: config file to use"
     echo "    -d: debug mode (leave log files)"
     echo "    -h: help"
@@ -255,6 +255,11 @@ if [ "$cluster_type" = "batch" ]; then
             --resource-group $resource_group \
             --storage-account $batch_storage_account \
             > $LOGDIR/az_batch_account_create.log
+        if [ $? != 0 ]; then
+            echo "ERROR: Failed to create batch account"
+            exit 1
+        fi
+
         jqstr+="|.batch.resource_group=\"$resource_group\""
         jqstr+="|.batch.account_name=\"$batch_account_name\""
 

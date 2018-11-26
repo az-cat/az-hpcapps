@@ -1,9 +1,18 @@
-### Fluent
+### Abaqus
 
 - Application name = **abaqus**
 
+#### Application binaries and data
+
+- upload **2017.AM_SIM_Abaqus_Extend.AllOS.\*-6.tar** files to {appstorage.storage_account}/apps/abaqus-2017
+- upload **\*.inp** files to {appstorage.storage_account}/data/abaqus-benchmarks
+
 #### Setup Steps
 
+```
+    ./build_image.sh -a abaqus
+    ./create_cluster.sh -a abaqus
+```
 
 #### Running Benchmarks
 

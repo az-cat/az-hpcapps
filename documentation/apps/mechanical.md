@@ -2,10 +2,17 @@
 
 - Application name = **mechanical**
 
+#### Application binaries and data
+
+- upload **STRUCTURES_182_LINX64.tar** to {appstorage.storage_account}/apps/ansys-mech-18
+- upload **BENCH_V180_LINUX.tgz** to {appstorage.storage_account}/data/ansys-mechanical-benchmarks
 
 #### Setup Steps
 
-Follow the 
+```
+    ./build_image.sh -a mechanical
+    ./create_cluster.sh -a mechanical
+``` 
 
 #### Running Tests
 

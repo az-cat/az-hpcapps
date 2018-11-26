@@ -6,6 +6,11 @@
 Gromacs source code is downloaded and compiled when building the image. Compiling on the same architecture than where the code is going to run will allow the build process to optimize for that architecture. For example choosing the right AVX set.
 Intel MPI tools and compiler are also downloaded, if the link expires, create a new trial account and update the link accordingly in the install_gromacs.sh file.
 
+```
+    ./build_image.sh -a gromacs
+    ./create_cluster.sh -a gromacs
+```
+
 #### Running Benchmarks
 
 The available benchmark packages and cases are : 

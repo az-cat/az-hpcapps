@@ -6,12 +6,18 @@ source /opt/intel/impi/*/bin64/mpivars.sh
 
 wget -q "$STORAGE_ENDPOINT/namd-2-10/namd_stmv_benchmark.tgz?$SAS_KEY" -O - | tar zx
 
+source /opt/intel/impi/*/bin64/mpivars.sh
+
+if [ "$INTERCONNECT" == "ib" ]; then
+    mpi_options="-genv I_MPI_FABRICS shm:dapl -genv I_MPI_FALLBACK_DEVICE 0 -genv I_MPI_DAPL_PROVIDER ofa-v2-ib0 -genv I_MPI_DYNAMIC_CONNECTION 0 -genv I_MPI_DAPL_TRANSLATION_CACHE 0 -genv I_MPI_STATS ipm"
+elif [ "$INTERCONNECT" == "sriov" ]; then
+    mpi_options="-genv I_MPI_FABRICS shm:ofa -genv I_MPI_FALLBACK_DEVICE 0 -genv I_MPI_STATS ipm"
+else
+    mpi_options="-genv I_MPI_FABRICS shm:tcp -genv I_MPI_STATS ipm"
+fi
+
 mpirun \
-    -genv I_MPI_FABRICS shm:dapl \
-    -genv I_MPI_DAPL_PROVIDER ofa-v2-ib0 \
-    -genv I_MPI_DYNAMIC_CONNECTION 0 \
-    -genv I_MPI_DAPL_TRANSLATION_CACHE 0 \
-    -genv I_MPI_STATS ipm \
+    $mpi_options \
     -np $CORES \
     -ppn $PPN \
     -hostfile $MPI_HOSTFILE \

@@ -1,19 +1,19 @@
 {
     "variables": {
-        "subscription_id": "",
-        "location": "",
-        "resource_group": "",
-        "tenant_id": "",
-        "client_id": "",
-        "client_secret": "",
-        "image_name": "",
-        "image_publisher": "",
-        "image_offer": "",
-        "image_sku": "",
-        "vm_size": "",
-        "storage_account_type": "Premium_LRS",
-        "appinstaller": "",
-        "baseimage": "baseimage.sh"
+      "image_name": "",
+      "image_publisher": "",
+      "image_offer": "",
+      "image_sku": "",
+      "vm_size": "",
+      "resource_group": "",
+      "storage_account": "",
+      "location": "",
+      "subscription_id": "",
+      "tenant_id": "",
+      "application_id": "",
+      "baseimage": "baseimage.sh",
+      "app_name": "",
+      "appinstaller": ""
     },
     "builders": [
         {
@@ -28,10 +28,11 @@
 			"image_offer": "{{user `image_offer`}}",
 			"image_sku": "{{user `image_sku`}}",
 
-            "managed_image_resource_group_name": "{{user `resource_group`}}",
-            "managed_image_name": "{{user `image_name`}}",
-            "managed_image_storage_account_type": "{{user `storage_account_type`}}",
-            
+            "resource_group_name": "{{user `resource_group`}}",
+            "storage_account": "{{user `storage_account`}}",
+            "capture_container_name": "{{user `app_name`}}",
+            "capture_name_prefix": "{{user `app_name`}}-{{user `image_name`}}",
+  
             "os_type": "Linux",
             "vm_size":  "{{user `vm_size`}}",
             "ssh_pty": "true",

@@ -1,4 +1,9 @@
 #!/bin/bash
+
+if [ ! -d "/opt/intel/impi" ]; then
+    setup_intel_mpi_2018
+fi
+
 HPC_APPS_STORAGE_ENDPOINT="#HPC_APPS_STORAGE_ENDPOINT#"
 HPCAPPS_SASKEY="#HPC_APPS_SASKEY#"
 LICENSE_SERVER="#LICSERVER#"
@@ -65,8 +70,9 @@ EOF
 
 ENV_PATH="/opt/abaqus/applications/DassaultSystemes/SimulationServices/V6R2017x/linux_a64/SMA/site"
 
-echo abaquslm_license_file="'$LICIP'" >> $ENV_PATH/custom_v6.env
-echo license_server_type=FLEXNET  >> $ENV_PATH/custom_v6.env
+# this is no longer needed as we set the license server in the run script
+#echo abaquslm_license_file="'$LICIP'" >> $ENV_PATH/custom_v6.env
+#echo license_server_type=FLEXNET  >> $ENV_PATH/custom_v6.env
 
 # Need to path the impi.env file to use the right intel mpi path
 cat <<EOF >$ENV_PATH/impi.env

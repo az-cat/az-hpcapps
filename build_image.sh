@@ -40,7 +40,7 @@ echo "app: $app"
 read_value subscription_id ".subscription_id"
 read_value location ".location"
 read_value sp_client_id ".service_principal.client_id"
-read_value sp_client_secret ".service_principal.client_secret"
+read_secret sp_client_secret ".service_principal.client_secret"
 read_value sp_tenant_id ".service_principal.tenant_id"
 read_value images_rg ".images.resource_group"
 read_value images_storage ".images.storage_account"
@@ -99,35 +99,16 @@ read_value app_storage_name ".appstorage.storage_account"
 read_value app_container ".appstorage.app_container"
 read_value hpc_apps_saskey ".appstorage.app_saskey"
 read_value licserver ".infrastructure.licserver"
-
+read_value app_storage_rg ".appstorage.resource_group"
 
 if [ "$hpc_apps_saskey" == "" ]; then
     # Create input data SAS KEY
-    read_value app_storage_rg ".appstorage.resource_group"
-    app_storage_key=$(az storage account keys list \
-        --resource-group $app_storage_rg \
-        --account-name $app_storage_name \
-        --query "[0].value" \
-        --output tsv)
-    echo "Adding container policy for read access"
-    az storage container policy create \
-        --container-name $app_container \
-        --name read \
-        --permissions r \
-        --account-key "$app_storage_key" \
-        --account-name $app_storage_name \
-        --start $(date --utc -d "-2 hours" +%Y-%m-%dT%H:%M:%SZ) \
-        --expiry $(date --utc -d "+1 year" +%Y-%m-%dT%H:%M:%SZ) \
-        --output table
-    hpc_apps_saskey=$(az storage container generate-sas \
-        --policy-name read \
-        --name $app_container \
-        --account-name $app_storage_name \
-        --account-key $app_storage_key \
-        --output tsv)
+    create_read_sas_key $app_storage_rg $app_storage_name $app_container
+    hpc_apps_saskey=$SAS_KEY
 fi
+
 echo "HPC apps SAS Key = $hpc_apps_saskey"
-hpc_apps_storage_endpoint="http://$app_storage_name.blob.core.windows.net/$app_container"
+hpc_apps_storage_endpoint="https://$app_storage_name.blob.core.windows.net/$app_container"
 echo "HPC apps storage endpoint is $hpc_apps_storage_endpoint"
 replace="s,#HPC_APPS_STORAGE_ENDPOINT#,$hpc_apps_storage_endpoint,g"
 replace+=";s,#HPC_APPS_SASKEY#,$hpc_apps_saskey,g"
@@ -136,27 +117,59 @@ replace+=";s,#LICSERVER#,$licserver,g"
 echo "Replace string: \"$replace\""
 replace=$(sed "s/\&/\\\&/g" <<< "$replace")
 app_install_script=install_${app}_${timestamp}.sh
-sed "$replace" apps/$app/install_$app.sh > $app_install_script
+sed "$replace" $DIR/apps/$app/install_$app.sh > $app_install_script
+
+get_pool_id $app
+app_img_name=$POOL_ID-$timestamp
+
+# update storage type based on VM size
+storage_account_type="Premium_LRS"
+vm_size=${vm_size,,}
+case $vm_size in
+    "standard_h16r") 
+        storage_account_type="Standard_LRS"
+        ;;
+    "standard_h16") 
+        storage_account_type="Standard_LRS"
+        ;;
+    "standard_h16rm") 
+        storage_account_type="Standard_LRS"
+        ;;
+esac
+echo "storage_account_type=$storage_account_type"
+
+case $storage_account_type in
+    "Premium_LRS")
+        packer_build_template=$DIR/packer/build.json
+        image_name=$app_img_name
+        ;;
+    "Standard_LRS")
+        packer_build_template=$DIR/packer/build_vhd.json
+        ;;
+esac
+echo "packer_build_template=$packer_build_template"
 
 # run packer
+PACKER_LOG=1
 packer_log=packer-output-$timestamp.log
-$packer_exe build -color=false \
+$packer_exe build \
     -var subscription_id=$subscription_id \
     -var location=$location \
     -var resource_group=$images_rg \
-    -var storage_account=$images_storage \
     -var tenant_id=$sp_tenant_id \
     -var client_id=$sp_client_id \
     -var client_secret=$sp_client_secret \
-    -var app_name=$app \
     -var image_name=$image_name \
     -var image_publisher=$image_publisher \
     -var image_offer=$image_offer \
     -var image_sku=$image_sku \
     -var vm_size=$vm_size \
+    -var storage_account_type=$storage_account_type \
     -var appinstaller=$app_install_script \
     -var baseimage=packer/$base_image \
-    packer/build.json \
+    -var app_name=$app \
+    -var storage_account=$images_storage \
+    $packer_build_template \
     | tee $packer_log
 
 if [ $? != 0 ]; then
@@ -166,23 +179,37 @@ fi
 
 rm $app_install_script
 
-# get vhd source from the packer output
-vhd_source="$(grep -Po '(?<=OSDiskUri\: )[^$]*' $packer_log)"
+errors=$(grep "ERROR" $packer_log)
+echo "Testing errors : $errors"
+if [ "$errors" != "" ]; then
+    echo "errors while creating the image"
+    echo "*******************************"
+    echo $errors
+    echo "*******************************"
+
+    echo "Deleting image $app_img_name"
+    az image delete --name $app_img_name --resource-group $images_rg
+    exit 1
+fi
+
+if [ "$storage_account_type" == "Standard_LRS" ]; then
+    # get vhd source from the packer output
+    vhd_source="$(grep -Po '(?<=OSDiskUri\: )[^$]*' $packer_log)"
+
+    echo "Creating image: $app_img_name (using $vhd_source)"
+    az image create \
+        --name $app_img_name \
+        --resource-group $images_rg \
+        --source $vhd_source \
+        --os-type Linux \
+        --location $location \
+        --output table
+
+    if [ $? != 0 ]; then
+        echo "ERROR: Failed to create image"
+        exit 1
+    fi
+fi
 
 rm $packer_log
 
-get_pool_id $app
-app_img_name=$POOL_ID-$timestamp
-
-echo "Creating image: $app_img_name (using $vhd_source)"
-az image create \
-    --name $app_img_name \
-    --resource-group $images_rg \
-    --source $vhd_source \
-    --os-type Linux \
-    --location $location \
-    --output table
-if [ $? != 0 ]; then
-    echo "ERROR: Failed to create image"
-    exit 1
-fi

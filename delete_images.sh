@@ -32,13 +32,7 @@ do
     esac
 done
 
-read_value subscription_id ".subscription_id"
-read_value sp_client_id ".service_principal.client_id"
-read_value sp_client_secret ".service_principal.client_secret"
-read_value sp_tenant_id ".service_principal.tenant_id"
 read_value images_rg ".images.resource_group"
-read_value batch_account ".batch.account_name"
-read_value batch_rg ".batch.resource_group"
 
 azure_login
 batch_login
@@ -65,10 +59,11 @@ for image in $image_list; do
     blobUri=$(az image show --ids $image --query "[storageProfile.osDisk.blobUri]" --output tsv)
     if [ "$image" != "$pool_image" ]; then
         echo "Deleting blob $blobUri"
-        [[ "$blobUri" =~ ^https://([^.]+).blob.core.windows.net/([^/]+)/(.*)$ ]]
-        
-        az storage blob delete -c ${BASH_REMATCH[2]} -n ${BASH_REMATCH[3]} --account-name ${BASH_REMATCH[1]}
-        
+        if [ "$blobUri" != "None" ]; then
+            [[ "$blobUri" =~ ^https://([^.]+).blob.core.windows.net/([^/]+)/(.*)$ ]]
+            az storage blob delete -c ${BASH_REMATCH[2]} -n ${BASH_REMATCH[3]} --account-name ${BASH_REMATCH[1]}
+        fi
+
         echo "Deleting image $image"
         az image delete --ids $image        
     fi

@@ -49,9 +49,6 @@ function read_value {
 
 read_value subscription_id ".subscription_id"
 read_value location ".location"
-read_value sp_client_id ".service_principal.client_id"
-read_value sp_client_secret ".service_principal.client_secret"
-read_value sp_tenant_id ".service_principal.tenant_id"
 read_value vnet_rg ".infrastructure.network.resource_group"
 read_value vnet ".infrastructure.network.vnet"
 read_value subnet ".infrastructure.network.subnet"

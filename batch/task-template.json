@@ -3,10 +3,10 @@
     "commandLine": "bash -c 'batch_wrapper.sh run_#APP_SCRIPT#.sh #SCRIPT_FLAGS#'",
     "resourceFiles": [
         {
-            "blobSource": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#/#APP#/#JOB_ID#/#TASK_ID#/scripts/run_#APP_SCRIPT#.sh?#RESULTS_SASKEY#",
+            "blobSource": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#/#APP#/#JOB_ID#/scripts/run_#APP_SCRIPT#.sh?#RESULTS_SASKEY#",
             "filePath": "run_#APP_SCRIPT#.sh"
         }, {
-            "blobSource": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#/#APP#/#JOB_ID#/#TASK_ID#/scripts/batch_wrapper.sh?#RESULTS_SASKEY#",
+            "blobSource": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#/#APP#/#JOB_ID#/scripts/batch_wrapper.sh?#RESULTS_SASKEY#",
             "filePath": "batch_wrapper.sh"
         }
     ],
@@ -46,6 +46,9 @@
             "elevationLevel": "nonadmin"
         }
     },
+    "applicationPackageReferences": [
+        {"applicationId":"#APP#", "version":"latest"}
+    ],
     "environmentSettings" : [
         {
             "name": "APPLICATION",

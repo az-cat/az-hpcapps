@@ -7,9 +7,7 @@ wget -q "${STORAGE_ENDPOINT}/ansys-fluent-benchmarks/${fluent_case}.tar?${SAS_KE
 end_time=$SECONDS
 download_time=$(($end_time - $start_time))
 echo "Download time is ${download_time}"
-
 source /opt/intel/impi/*/bin64/mpivars.sh
-export MPI_ROOT=$I_MPI_ROOT
 
 if [ "$INTERCONNECT" == "ib" ]; then
     export I_MPI_FABRICS=shm:dapl
@@ -17,11 +15,17 @@ if [ "$INTERCONNECT" == "ib" ]; then
     export I_MPI_DYNAMIC_CONNECTION=0
     export I_MPI_FALLBACK_DEVICE=0
     export FLUENT_BENCH_OPTIONS="-pib.dapl"
+elif [ "$INTERCONNECT" == "sriov" ]; then
+    export I_MPI_FABRICS=shm:ofa
+    export I_MPI_FALLBACK_DEVICE=0
+    export FLUENT_BENCH_OPTIONS="-pib.ofa"
 else
     export I_MPI_FABRICS=shm:tcp
 fi
 
-export PATH=/opt/ansys_inc/v182/fluent/bin:$PATH
+export MPI_ROOT=$I_MPI_ROOT
+export VERSION=192
+export PATH=/opt/ansys_inc/v${VERSION}/fluent/bin:$PATH
 export ANSYSLMD_LICENSE_FILE=1055@${LICENSE_SERVER}
 
 echo "Cleaning up old processes"
@@ -49,7 +53,7 @@ if [ -f "${case_output}" ]; then
     
     cat <<EOF >$APPLICATION.json
     {
-    "version": "18.2",
+    "version": "$VERSION",
     "model": "$fluent_case",
     "rating": $rating,
     "total_wall_time": $total_wall_time,

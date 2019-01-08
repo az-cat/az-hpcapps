@@ -115,18 +115,6 @@ if is_not_set .location; then
     update_config_file location
 fi
 
-if is_not_set .service_principal.name; then
-    echo -n "Enter the service principal name to create: "
-    read sp_name
-    az ad sp create-for-rbac --name $sp_name > $LOGDIR/az_ad_sp_create-for-rbac.log
-    jqstr+="|.service_principal.name=\"$sp_name\""
-    jqstr+="|.service_principal.tenant_id=\"$(jq -r '.tenant' $LOGDIR/az_ad_sp_create-for-rbac.log)\""
-    jqstr+="|.service_principal.client_id=\"$(jq -r '.appId' $LOGDIR/az_ad_sp_create-for-rbac.log)\""
-    jqstr+="|.service_principal.client_secret=\"$(jq -r '.password' $LOGDIR/az_ad_sp_create-for-rbac.log)\""
-
-    update_config_file service_principal
-fi
-
 read_value resource_group .resource_group
 if is_not_set .resource_group; then
     echo -n "Enter resource group (for anything new to be created in): "
@@ -140,6 +128,33 @@ if is_not_set .resource_group; then
     jqstr+="|.resource_group=\"$resource_group\""
 
     update_config_file resource_group
+fi
+echo ""
+echo "** Note: Azure Key Vault is used to store secrets"
+echo "   If you sepcify an existing Vault, this script will add secrets in it"
+echo "   If the Vault doesn't exists, it will create one for you"
+
+echo -n "Enter the Key Vault Name: "
+read vault_name
+vault=$(az keyvault show --name $vault_name --output tsv)
+if [ "$vault" = "" ]; then
+    az keyvault create --name $vault_name --resource_group $resource_group
+fi
+
+if is_not_set .service_principal.name; then
+    echo -n "Enter the service principal name to create: "
+    read sp_name
+    az ad sp create-for-rbac --name $sp_name > $LOGDIR/az_ad_sp_create-for-rbac.log
+
+    secret=$(jq -r '.password' $LOGDIR/az_ad_sp_create-for-rbac.log)
+    az keyvault secret set --vault-name $vault_name --name "spn-secret" --value $secret
+    
+    jqstr+="|.service_principal.name=\"$sp_name\""
+    jqstr+="|.service_principal.tenant_id=\"$(jq -r '.tenant' $LOGDIR/az_ad_sp_create-for-rbac.log)\""
+    jqstr+="|.service_principal.client_id=\"$(jq -r '.appId' $LOGDIR/az_ad_sp_create-for-rbac.log)\""
+    jqstr+="|.service_principal.client_secret=\"$vault_name.spn-secret\""
+
+    update_config_file service_principal
 fi
 
 if is_not_set .packer.executable; then

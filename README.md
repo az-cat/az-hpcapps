@@ -18,6 +18,7 @@ Star-CCM+, and you can add more as needed as described in this guide.
     - [Create site-to-site VPN](#create-site-to-site-vpn)
 - [Create Azure resources and
   configuration](#create-azure-resources-and-configuration)
+    - [Create a Key Vault to store secrets](#create-a-key-vault-to-store-secrets)
     - [Specify subscription and location](#specify-subscription-and-location)
     - [Get Packer](#get-packer)
     - [Store the images](#store-the-images)
@@ -30,6 +31,7 @@ Star-CCM+, and you can add more as needed as described in this guide.
     - [Set up an HPC application](#set-up-an-hpc-application)
     - [Add an application to the catalog](#add-an-application-to-the-catalog)
     - [Add test cases](#add-test-cases)
+    - [MPI environment variables](#mpi-environment-variables)
     - [Log data](#log-data)
 - [Collect telemetry data](#collect-telemetry-data)
 
@@ -87,12 +89,12 @@ Guide](https://docs.cyclecomputing.com/user-guide-launch).
 
 Before using these scripts, do the following:
 
-1.  Install [Azure CLI
+1.  It is highly recommended to use [Cloud Shell](https://azure.microsoft.com/en-us/features/cloud-shell/) which is the fastest way to start.
+
+> NOTE : If not using a Cloud Shell, Install [Azure CLI
     2.0](https://docs.microsoft.com/cli/azure/?view=azure-cli-latest). If
     running Bash on Windows, follow these
     [instructions](https://www.michaelcrump.net/azure-cli-with-win10-bash/).
-
-> NOTE : You can also use [Cloud Shell](https://azure.microsoft.com/en-us/features/cloud-shell/) which is the faster way to start
 
 2.  Clone the repo:
 ```
@@ -117,8 +119,8 @@ that need to share data across message passing interface (MPI) processes. In the
 GitHub repo, the deploy\_nfs.json file builds a virtual network and an NFS
 server with a 1 TB data disk.
 
-> **IMPORTANT: This step is mandatory as virtual machine pools will be created
-> within this virtual network.**
+> **IMPORTANT**: This step is mandatory as virtual machine pools will be created
+> within this virtual network.
 
 The virtual network is created with these properties:
 
@@ -239,7 +241,7 @@ config.json file with your values as explained in the sections below.
     "service_principal": {
         "tenant_id": "",
         "client_id": "",
-        "client_secret": ""
+        "client_secret": "<keyvaultname>.spn-secret"
     },
     "images": {
         "resource_group": "",
@@ -261,8 +263,7 @@ config.json file with your values as explained in the sections below.
     "cyclecloud": {
         "resource_group": "",
         "storage_account": "",
-        "admin_password": "",
-        "admin_user": "admin"
+        "admin_password": "<keyvaultname>.cycle-password"
     },
     "infrastructure": {
         "nfsserver": "10.0.2.4",
@@ -280,7 +281,7 @@ config.json file with your values as explained in the sections below.
         },
         "analytics": {
             "workspace":"",
-            "key":""
+            "key":"<keyvaultname>.analytics-key"
         }
     },
     "appstorage": {
@@ -296,6 +297,27 @@ config.json file with your values as explained in the sections below.
     }
 }
 ```
+
+> **Note**: Secrets have to be stored in a KeyVault, see the section below on how to store your secrets
+>
+
+## Create a Key Vault to store secrets
+Azure Key Vault is used to store your secret and avoid storing them in configuration files. Configuration fields storing secrets will instead store the keyvault name and the key name using the naming pattern **vault_name.key_name**. If you use the setup.sh script, the Key Vault will be automatically created for you and filled with the required secrets. 
+
+To create a Key Vault use this command :
+
+``` 
+az keyvault create --name 'Contoso-Vault2' --resource-group 'ContosoResourceGroup' --location eastus
+``` 
+
+To add a secret to Key Vault use this command :
+
+``` 
+az keyvault secret set --vault-name 'Contoso-Vault2' --name 'ExamplePassword' --value 'Pa$$w0rd'
+``` 
+
+To learn more about Key Vault see the online documentation [here](https://docs.microsoft.com/en-us/azure/key-vault/)
+
 
 ## Specify subscription and location
 
@@ -342,14 +364,14 @@ Outputs:
 }
 ```
 
-Using these output values, in config.json, update the values for tenant\_id,
-client\_id, and client\_secret:
+Using these output values, in config.json, update the values for **tenant_id**,
+**client_id**. Store the **client_secret** in your KeyVault under the spn-secret key:
 
 ```json
 "service_principal": {
     "tenant_id": "tenant",
     "client_id": "appId",
-    "client_secret": "password"
+    "client_secret": "<keyvaultname>.spn-secret"
 }
 ```
 
@@ -419,19 +441,18 @@ to create one.
 
 If using Azure CycleCloud, specify the resource group containing the account,
 the name of the storage account linked to the CycleCloud account, and the logon
-credentials. For example:
+credentials. The admin_password has to be stored in KeyVault. For example:
 
 ```json
 "cyclecloud": {
     "resource_group": "cyclecloud-rg",
     "storage_account": "cyclecloudstorage",
-    "admin_password": "mystrongpassword",
-    "admin_user": "admin"
+    "admin_password": "<keyvaultname>.cycle-password"
 }
 ```
 
 > **NOTE:** You do not need to provision a CycleCloud virtual machine in
-> advance. The create\_cluster.sh script looks for a CycleCloud installation
+> advance. The **create_cluster.sh** script looks for a CycleCloud installation
 > named appcatalog, and if it doesn’t find one, it provisions, installs, and
 > sets up the virtual machine.
 
@@ -439,8 +460,8 @@ credentials. For example:
 
 In config.json, you must specify the IP addresses of the NFS server and license
 server. If you use the default scripts to build your NFS server, the IP address
-is 10.0.2.4. The default mount is **/data**. For the **network** values, specify the **resource\_group** name.
-The values for **vnet**, **subnet**, and **admin\_subnet** are the same as those
+is 10.0.2.4. The default mount is **/data**. For the **network** values, specify the **resource_group** name.
+The values for **vnet**, **subnet**, and **admin_subnet** are the same as those
 used earlier when building the NFS server and virtual network.
 
 > **NOTE:** If you have an Avere system deployed in your network, you can specify its IP and mount point in the NFS settings.
@@ -473,15 +494,16 @@ If you have a BeeGFS system setup, you can specify the management IP and the mou
 If you want to store the telemetry data collected during the runs,
 you can create an Azure [Log Analytics
 workspace](https://docs.microsoft.com/azure/log-analytics/log-analytics-quick-create-workspace).
-Once in place, update config.json and specify the Log Analytics workspace ID and
-application key from your environment:
+Once in place, update config.json and specify the Log Analytics workspace ID. Store the application key from your environment in KeyVault under **analytics-key** :
 
 ```json
 "analytics": {
     "workspace":"99999999-9999-9999-9999-999999999999",
-    "key":"key=="
+    "key":"<keyvaultname>.analytics-key"
 }
 ```
+
+The key can be find in the Advanced Settings / Connected sources of your workspace.
 
 ## Application storage
 
@@ -563,10 +585,11 @@ application you want is not shown here, see the next section.
 | [Abaqus](./documentation/apps/abaqus.md)                                 | abaqus             | 2017           |    No         |  Yes        |
 | [ANSYS Mechanical](./documentation/apps/mechanical.md)                   | mechanical         | 18.2           |    No         |  Yes        |
 | [ANSYS Fluent](./documentation/apps/fluent.md)                           | fluent             | 18.2           |    No         |  Yes        |
+| [Empty](./documentation/apps/empty.md) - *diagnostics*                   | empty              |                |    No         |  No         |
 | [Gromacs](./documentation/apps/gromacs.md)                               | gromacs            | 2018.1         |    Yes        |  No         |
 | [NAMD](./documentation/apps/namd.md)                                     | namd               | 2.10           |    No         |  No         |
-| [OpenFOAM](./documentation/apps/openfoam.md)                             | openfoam           | 4.x            |    Yes        |  No         |
 | [nwchem](./documentation/apps/nwchem.md)                                 | nwchem             | 6.8            |    Yes        |  No         |
+| [OpenFOAM](./documentation/apps/openfoam.md)                             | openfoam           | 4.x            |    Yes        |  No         |
 
 ## Add an application to the catalog
 
@@ -604,7 +627,7 @@ folder. To add an application to the catalog:
 > and `#HPC_APPS_SASKEY#` in the install file before it is used.
 
 After you add a new application script, use the steps provided earlier to run it. That is, build the image, create the pools or clusters, then run
-the application. Make sure the value of **\<app\_name\>** in the commands (such as
+the application. Make sure the value of **<app_name>** in the commands (such as
 `install_<app_name>`) exactly matches the name you used.
 
 ## Add test cases
@@ -613,27 +636,34 @@ New tests cases must be added to their **app** folder and called
 `run_<CASE-NAME>.sh`. This script is run after all the resources are ready. The
 following environment variables are available to use:
 
-| **Variable**         | **Description**                                  |
-|----------------------|--------------------------------------------------|
-| APPLICATION          | Application name                                 |
-| SHARED\_DIR          | Path to shared directory accessible by all nodes |
-| CORES                | Number of MPI ranks                              |
-| NODES                | Number of nodes for the task                     |
-| PPN                  | Number of processes per node to use              |
-| MPI\_HOSTFILE        | File containing an MPI hostfile                  |
-| MPI\_MACHINEFILE     | File containing an MPI machinefile               |
-| MPI\_HOSTLIST        | A comma-separated list of hosts                  |
-| LICENSE\_SERVER      | Hostname/IP address of the license server        |
-| OUTPUT\_DIR          | Directory for output that is uploaded            |
-| STORAGE\_ENDPOINT    | Application data endpoint                        |
-| SAS\_KEY             | Application data SAS key                         |
-| ANALYTICS\_WORKSPACE | Log Analytics workspace ID                       |
-| ANALYTICS\_KEY       | Log Analytics key                                |
-| INTERCONNECT         | Type of interconnect (**tcp** or **ib**)                 |
+| **Variable**         | **Description**                                     |
+|----------------------|-----------------------------------------------------|
+| ANALYTICS_WORKSPACE  | Log Analytics workspace ID                          |
+| ANALYTICS_KEY        | Log Analytics key                                   |
+| APPLICATION          | Application name                                    |
+| APP_PACKAGE_DIR      | Application package dir when using Batch Packages   |
+| CORES                | Number of MPI ranks                                 |
+| IB_PKEY              | Infiniband primary key                              |
+| INTERCONNECT         | Type of interconnect (**tcp**, **ib** or **sriov**) |
+| LICENSE_SERVER       | Hostname/IP address of the license server           |
+| MPI_HOSTFILE         | File containing an MPI hostfile                     |
+| MPI_HOSTLIST         | A comma-separated list of hosts                     |
+| MPI_MACHINEFILE      | File containing an MPI machinefile                  |
+| NODES                | Number of nodes for the task                        |
+| OUTPUT_DIR           | Directory for output that is uploaded               |
+| PPN                  | Number of processes per node to use                 |
+| SAS_KEY              | Application data SAS key                            |
+| SHARED_DIR           | Path to shared directory accessible by all nodes    |
+| STORAGE_ENDPOINT     | Application data endpoint                           |
+| UCX_IB_PKEY          | Infiniband primary key for UCX                      |
 
+## MPI environment variables
 
 The creator of the script is responsible for setting up the MPI environment in
-addition to specifying all the MPI flags. To set up the MPI environment, run:
+addition to specifying all the MPI flags.
+
+### Intel MPI
+To set up the MPI environment, run:
 
 ```
 source /opt/intel/impi/*/bin64/mpivars.sh
@@ -642,9 +672,9 @@ source /opt/intel/impi/*/bin64/mpivars.sh
 > **NOTE:** The wildcard is used here to avoid issues if the Intel MPI version
 > changes.
 
-The mandatory environment variables when using Azure are I\_MPI\_FABRICS,
-I\_MPI\_DAPL\_PROVIDER and I\_MPI\_DYNAMIC\_CONNECTION. We also recommend using
-I\_MPI\_DAPL\_TRANSLATION\_CACHE because some applications crash if it is not
+The mandatory environment variables when using Azure with **H16r only**, are **I_MPI_FABRICS**,
+**I_MPI_DAPL_PROVIDER** and **I_MPI_DYNAMIC_CONNECTION**. We also recommend using
+**I_MPI_DAPL_TRANSLATION_CACHE** because some applications crash if it is not
 set. The environment variables can be passed to **mpirun** with the following
 arguments:
 
@@ -655,11 +685,19 @@ arguments:
 -genv I_MPI_DAPL_TRANSLATION_CACHE 0
 ```
 
+When using **HB60rs** use these settings :
+
+```
+-genv I_MPI_FABRICS shm:ofa
+-genv I_MPI_DYNAMIC_CONNECTION 0
+```
+
+
 ## Log data
 
-The application run script uploads any data in OUTPUT\_DIR to the results
+The application run script uploads any data in **OUTPUT_DIR** to the results
 storage account. Additionally, any JSON data that is stored in
-\$APPLICATION.json when the script exits is uploaded to Log Analytics. This
+**$APPLICATION.json** when the script exits is uploaded to Log Analytics. This
 information includes run time or iterations per second, and can be used to track
 the application performance. Ideally this data can be extracted from the program
 output, but the following simple example shows a timing metric for **mpirun**:
@@ -680,7 +718,7 @@ EOF
 
 For each application, you can collect and push key performance indicators (KPI)
 into Log Analytics. To do so, each application run script needs to build an
-\$APPLICATION.json file as explained in the previous section. You should extract
+**$APPLICATION.json** file as explained in the previous section. You should extract
 from the application logs and outputs the data needed to compare application
 performance, like Wall Clock Time, CPU Time, iterations, and any ranking
 metrics.
@@ -699,7 +737,6 @@ The application catalog is growing regularly. Below is the list of what is curre
 - GAMMES
 - LAMMPS
 - Linpack
-- NWChem
 - Pamcrash
 - Quantum Espresso
 - StarCCM

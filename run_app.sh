@@ -10,6 +10,7 @@ ppn=
 script_flags=
 jobname=
 taskname=
+repeat=1
 
 function usage(){
     me=`basename $0`
@@ -24,12 +25,14 @@ function usage(){
     echo "    -n: number of nodes"
     echo "    -m: machine_size"
     echo "    -p: processes per node"
+    echo "    -q: pool name (in order to force running a script on a specific pool)"
     echo "    -x: script flags to pass"
+    echo "    -r: repeat n times the same task"
     echo "    -h: help"
     echo ""
 }
 
-while getopts "a: c: s: n: m: p: x: j: t: h" OPTION
+while getopts "a: c: s: n: m: p: q: x: r: j: t: h" OPTION
 do
     case ${OPTION} in
         c)
@@ -56,8 +59,14 @@ do
         p)
         ppn=$OPTARG
             ;;
+        q)
+        pool_name=$OPTARG
+            ;;
         x)
         script_flags=$OPTARG
+            ;;
+        r)
+        repeat=$OPTARG
             ;;
         h)
         usage
@@ -68,10 +77,15 @@ done
 
 shift $(( OPTIND - 1 ));
 
-if [ -z "$jobname" ]; then
+if [ -z "$pool_name" ]; then
     get_pool_id $app
-    jobname=$POOL_ID
     pool_id=$POOL_ID
+else
+    pool_id=$pool_name
+fi
+
+if [ -z "$jobname" ]; then
+    jobname=$pool_id
 fi
 
 # Set to default values if not set through input args
@@ -87,118 +101,9 @@ echo "processes per node: $ppn"
 echo "script flags: $script_flags"
 echo "job name: $jobname"
 echo "task name: $taskname"
+echo "repeat: $repeat"
 
-function create_jobfile {
-    # create container for results and policy (if it doesn't exist)
-    read_value results_storage_rg ".results.resource_group"
-    read_value results_storage_name ".results.storage_account"
-    read_value results_container ".results.container"
-
-    results_storage_key=$(az storage account keys list \
-        --resource-group $results_storage_rg \
-        --account-name $results_storage_name \
-        --query "[0].value" \
-        --output tsv)
-
-    container_exists="$(az storage container exists \
-        --account-name $results_storage_name \
-        --account-key "$results_storage_key" \
-        --name $results_container --output tsv)"
-    if [ "$container_exists" == "False" ]; then
-        echo "Creating container ($results_container)..."
-        az storage container create \
-            --account-name $results_storage_name \
-            --account-key "$results_storage_key" \
-            --name $results_container \
-            --output table
-
-        echo "Adding container policy for read write access"
-        az storage container policy create \
-            --container-name $results_container \
-            --name rw \
-            --permissions rw \
-            --account-key "$results_storage_key" \
-            --account-name $results_storage_name \
-            --start $(date --utc -d "-2 hours" +%Y-%m-%dT%H:%M:%SZ) \
-            --expiry $(date --utc -d "+1 year" +%Y-%m-%dT%H:%M:%SZ) \
-            --output table
-    else
-        echo "Container ($results_container) already exists."
-    fi
-
-    results_saskey=$(az storage container generate-sas \
-        --policy-name rw \
-        --name $results_container \
-        --account-name $results_storage_name \
-        --account-key $results_storage_key \
-        --output tsv)
-    echo "SAS Key = $results_saskey"
-    results_storage_endpoint=$(az storage account show \
-        --resource-group $results_storage_rg \
-        --name $results_storage_name \
-        --query "primaryEndpoints.blob" \
-        --output tsv)
-    echo "Results storage endpoint is $results_storage_endpoint"
-
-    # upload the batch wrapper and the application scripts
-    echo "Uploading batch wrapper"
-    filename="./batch/batch_wrapper.sh"
-    blobname="${app}/${job_id}/${task_id}/scripts/batch_wrapper.sh"
-    az storage blob upload \
-        --container-name $results_container \
-        --account-name $results_storage_name \
-        --account-key $results_storage_key \
-        --file $filename \
-        --name $blobname \
-        --output table
-
-    echo "Uploading application runner"
-    filename="./apps/${app}/run_${app_script}.sh"
-    blobname="${app}/${job_id}/${task_id}/scripts/run_${app_script}.sh"
-    az storage blob upload \
-        --container-name $results_container \
-        --account-name $results_storage_name \
-        --account-key $results_storage_key \
-        --file $filename \
-        --name $blobname \
-        --output table
-
-    read_value licserver ".infrastructure.licserver"
-    read_value data_storage_name ".appstorage.storage_account"
-    read_value data_container ".appstorage.data_container"
-    read_value hpc_data_saskey ".appstorage.data_saskey"
-
-    if [ "$hpc_data_saskey" == "" ]; then
-        # Create input data SAS KEY
-        read_value data_storage_rg ".appstorage.resource_group"
-        data_storage_key=$(az storage account keys list \
-            --resource-group $data_storage_rg \
-            --account-name $data_storage_name \
-            --query "[0].value" \
-            --output tsv)
-        echo "Adding container policy for read access"
-        az storage container policy create \
-            --container-name $data_container \
-            --name read \
-            --permissions r \
-            --account-key "$data_storage_key" \
-            --account-name $data_storage_name \
-            --start $(date --utc -d "-2 hours" +%Y-%m-%dT%H:%M:%SZ) \
-            --expiry $(date --utc -d "+1 year" +%Y-%m-%dT%H:%M:%SZ) \
-            --output table
-        hpc_data_saskey=$(az storage container generate-sas \
-            --policy-name read \
-            --name $data_container \
-            --account-name $data_storage_name \
-            --account-key $data_storage_key \
-            --output tsv)
-    fi
-    echo "HPC data SAS Key = $hpc_data_saskey"
-    hpc_data_storage_endpoint="http://$data_storage_name.blob.core.windows.net/$data_container"
-    echo "HPC data storage endpoint is $hpc_data_storage_endpoint"
-
-    read_value analytics_workspace ".infrastructure.analytics.workspace"
-    read_value analytics_key ".infrastructure.analytics.key"
+function fill_jobfile {
 
     replace="s,#TASK_ID#,$task_id,g"
     replace+=";s,#JOB_ID#,$job_id,g"
@@ -218,16 +123,68 @@ function create_jobfile {
     # escape string for sed
     echo "Replace string: \"$replace\""
     replace=$(sed "s/\&/\\\&/g" <<< "$replace")
-    sed "$replace" batch/task-template.json > ${task_id}.json
+    sed "$replace" $DIR/batch/task-template.json > ${task_id}.json
 
 }
 
-echo "Ready to read in the values"
-read_value subscription_id ".subscription_id"
-read_value location ".location"
-read_value sp_client_id ".service_principal.client_id"
-read_value sp_client_secret ".service_principal.client_secret"
-read_value sp_tenant_id ".service_principal.tenant_id"
+
+function create_jobfile {
+    # create container for results and policy (if it doesn't exist)
+    read_value results_storage_rg ".results.resource_group"
+    read_value results_storage_name ".results.storage_account"
+    read_value results_container ".results.container"
+
+    create_rw_sas_key $results_storage_rg $results_storage_name $results_container
+    results_saskey=$SAS_KEY
+    echo "SAS Key = $results_saskey"
+    results_storage_endpoint=$(az storage account show \
+        --resource-group $results_storage_rg \
+        --name $results_storage_name \
+        --query "primaryEndpoints.blob" \
+        --output tsv)
+    echo "Results storage endpoint is $results_storage_endpoint"
+
+    # upload the batch wrapper and the application scripts
+    echo "Uploading batch wrapper"
+    filename="$DIR/batch/batch_wrapper.sh"
+    blobname="${app}/${job_id}/scripts/batch_wrapper.sh"
+    az storage blob upload \
+        --container-name $results_container \
+        --account-name $results_storage_name \
+        --file $filename \
+        --name $blobname \
+        --output table
+
+    echo "Uploading application runner"
+    filename="$DIR/apps/${app}/run_${app_script}.sh"
+    blobname="${app}/${job_id}/scripts/run_${app_script}.sh"
+    az storage blob upload \
+        --container-name $results_container \
+        --account-name $results_storage_name \
+        --file $filename \
+        --name $blobname \
+        --output table
+
+    read_value licserver ".infrastructure.licserver"
+    read_value data_storage_name ".appstorage.storage_account"
+    read_value data_container ".appstorage.data_container"
+    read_value hpc_data_saskey ".appstorage.data_saskey"
+
+    if [ "$hpc_data_saskey" == "" ]; then
+        # Create input data SAS KEY
+        read_value data_storage_rg ".appstorage.resource_group"
+        create_read_sas_key $data_storage_rg $data_storage_name $data_container
+        hpc_data_saskey=$SAS_KEY
+    fi
+    echo "HPC data SAS Key = $hpc_data_saskey"
+    hpc_data_storage_endpoint="http://$data_storage_name.blob.core.windows.net/$data_container"
+    echo "HPC data storage endpoint is $hpc_data_storage_endpoint"
+
+    read_value analytics_workspace ".infrastructure.analytics.workspace"
+    read_secret analytics_key ".infrastructure.analytics.key"
+
+    fill_jobfile
+}
 
 timestamp=$(date +%Y%m%d-%H%M%S)
 if [ -z "$taskname" ]; then
@@ -246,8 +203,6 @@ if [ "$cluster_type" == "batch" ]; then
     #
     # RUN SCRIPT ON BATCH POOL FOR THE CLUSTER
     #
-    read_value batch_rg ".batch.resource_group"
-    read_value batch_account ".batch.account_name"
 
     batch_login
 
@@ -264,7 +219,14 @@ if [ "$cluster_type" == "batch" ]; then
 
     echo "Task ID: $task_id"
     echo "Job ID: $job_id"
-    az batch task create --job-id $job_id --json-file ${task_id}.json --output table
+    for i in $(seq 1 $repeat); do
+        az batch task create --job-id $job_id --json-file ${task_id}.json --output table
+        rm ${task_id}.json
+
+        timestamp=$(date +%Y%m%d-%H%M%S)
+        task_id=${taskname}_${timestamp}
+        fill_jobfile
+    done
 
     echo "Job ID: $job_id"
     rm ${task_id}.json

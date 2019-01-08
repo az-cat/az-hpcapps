@@ -7,10 +7,12 @@ wget -q "${STORAGE_ENDPOINT}/abaqus-benchmarks/${MODEL}.inp?${SAS_KEY}" -O ${MOD
 if [ "$INTERCONNECT" == "ib" ]; then
     export mpi_options="-env IMPI_FABRICS=shm:dapl -env I_MPI_DAPL_PROVIDER=ofa-v2-ib0 -env I_MPI_DYNAMIC_CONNECTION=0 -env I_MPI_FALLBACK_DEVICE=0"
     export MPI_RDMA_MSGSIZE="16384,1048576,4194304"
+elif [ "$INTERCONNECT" == "sriov" ]; then
+    export mpi_options="-env IMPI_FABRICS=shm:ofa -env I_MPI_FALLBACK_DEVICE=0"
+    #export MPI_RDMA_MSGSIZE="16384,1048576,4194304"
 else
     export mpi_options="-env IMPI_FABRICS=shm:tcp"
 fi
-
 
 #define hosts in abaqus_v6.env file
 # mp_file_system=(LOCAL,LOCAL)
@@ -20,6 +22,8 @@ mp_host_list=[['$(sed "s/,/',$PPN],['/g" <<< $MPI_HOSTLIST)',$PPN]]
 mp_host_split=8
 scratch="$AZ_BATCH_TASK_WORKING_DIR"
 mp_mpirun_options="$mpi_options"
+license_server_type=FLEXNET
+abaquslm_license_file="27000@${LICENSE_SERVER}"
 EOF
 
 # need to unset CCP_NODES otherwise Abaqus think it is running on HPC Pack

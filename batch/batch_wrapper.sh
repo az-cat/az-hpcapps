@@ -15,18 +15,56 @@ mkdir $OUTPUT_DIR
 export SHARED_DIR=/data/$AZ_BATCH_JOB_ID/$AZ_BATCH_TASK_ID
 mkdir -p $SHARED_DIR
 
+APP_PACKAGE_DIR=AZ_BATCH_APP_PACKAGE_${APPLICATION}
+export APP_PACKAGE_DIR=${!APP_PACKAGE_DIR}/${APPLICATION}
+
+get_ib_pkey()
+{
+    key0=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/0)
+    key1=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/1)
+
+    if [ $(($key0 - $key1)) -gt 0 ]; then
+        export IB_PKEY=$key0
+    else
+        export IB_PKEY=$key1
+    fi
+
+    export UCX_IB_PKEY=$(printf '0x%04x' "$(( $IB_PKEY & 0x0FFF ))")
+}
+
 is_rdma_capable()
 {
     grep -o '^OS.EnableRDMA=y' /etc/waagent.conf
     return $?
 }
 
-export INTERCONNECT=tcp
-if is_rdma_capable; then
+#   On H  using DAPL  ETH1 should be up
+is_ib_dapl()
+{
+    ip link show eth1 up
+    return $?
+}
+
+#   On HB using SRIOV IB0  should be up
+is_ib_sriov()
+{
+    ip link show ib0 up
+    return $?
+}
+
+# Test IB device. 
+if [ is_ib_sriov ]; then
+    export INTERCONNECT=sriov
+    get_ib_pkey
+elif [ is_ib_dapl ]; then
     export INTERCONNECT=ib
+else
+    export INTERCONNECT=tcp
 fi
 
 chmod +x $1
+set -e
+set -o pipefail
 ./$@
 
 if [ $? != 0 ]; then

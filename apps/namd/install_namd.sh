@@ -1,4 +1,7 @@
 #!/bin/bash
+if [ ! -d "/opt/intel/impi" ]; then
+    setup_intel_mpi_2018
+fi
 
 HPC_APPS_STORAGE_ENDPOINT="#HPC_APPS_STORAGE_ENDPOINT#"
 HPC_APPS_SASKEY="#HPC_APPS_SASKEY#"

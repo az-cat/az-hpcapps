@@ -4,7 +4,7 @@
 
 #### Application binaries and data
 
-- upload **STRUCTURES_182_LINX64.tar** to {appstorage.storage_account}/apps/ansys-mech-18
+- upload **STRUCTURES_192_LINX64.tar** to {appstorage.storage_account}/apps/ansys-mech-19-2
 - upload **BENCH_V180_LINUX.tgz** to {appstorage.storage_account}/data/ansys-mechanical-benchmarks
 
 #### Setup Steps

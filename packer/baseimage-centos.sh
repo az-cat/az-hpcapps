@@ -37,12 +37,16 @@ if [ $? != 0 ]; then
     exit 1
 fi
 
+# turn off GSS proxy
+sed -i 's/GSS_USE_PROXY="yes"/GSS_USE_PROXY="no"/g' /etc/sysconfig/nfs
+
 # Don't require password for HPC user sudo
 echo "$USER ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Disable tty requirement for sudo
 sed -i 's/^Defaults[ ]*requiretty/# Defaults requiretty/g' /etc/sudoers
 
+setenforce 0
 # Disable SELinux
 cat << EOF > /etc/selinux/config
 # This file controls the state of SELinux on the system.
@@ -143,18 +147,39 @@ install_mlx_ofed()
     fi
 }
 
-# check if running on HB
-vmSize=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
-echo "vmSize is $vmSize"
-if [ "${vmSize,,}" = "standard_hb60rs" ]; then
+upgrade_lis()
+{
+    cd /mnt/resource
+    set +e
+    wget --retry-connrefused --read-timeout=10 https://aka.ms/lis
+    tar xvzf lis
+    pushd LISISO
+    ./upgrade.sh
+    popd
+    set -e
+}
+
+# check if running on HB/HC
+VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
+VMSIZE=${VMSIZE,,}
+echo "vmSize is $VMSIZE"
+if [ "$VMSIZE" == "standard_hb60rs" ] || [ "$VMSIZE" == "standard_hc44rs" ]
+then
     set +e
     yum install -y numactl
     install_mlx_ofed
-    systemctl disable cpupower
-    systemctl disable firewalld
     set -e
 fi
 
-install_beegfs_client
+#upgrade_lis
+
+# update WALA
+yum update -y WALinuxAgent
+
+# optimize
+systemctl disable cpupower
+systemctl disable firewalld
+
+#install_beegfs_client
 
 echo "End of base image "

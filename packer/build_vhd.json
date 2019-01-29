@@ -18,7 +18,6 @@
     "builders": [
         {
             "type": "azure-arm",
-  
             "subscription_id": "{{user `subscription_id`}}",
             "tenant_id": "{{user `tenant_id`}}",
             "client_id": "{{user `client_id`}}",

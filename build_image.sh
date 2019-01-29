@@ -125,14 +125,11 @@ app_img_name=$POOL_ID-$timestamp
 # update storage type based on VM size
 storage_account_type="Premium_LRS"
 vm_size=${vm_size,,}
-case $vm_size in
-    "standard_h16r") 
+case "$vm_size" in
+    *_h16*) 
         storage_account_type="Standard_LRS"
         ;;
-    "standard_h16") 
-        storage_account_type="Standard_LRS"
-        ;;
-    "standard_h16rm") 
+    *_f72*)
         storage_account_type="Standard_LRS"
         ;;
 esac
@@ -152,7 +149,16 @@ echo "packer_build_template=$packer_build_template"
 # run packer
 PACKER_LOG=1
 packer_log=packer-output-$timestamp.log
-$packer_exe build \
+version=$($packer_exe --version)
+
+echo "running on packer version $version"
+
+if [ "$version" == "1.3.3" ]; then
+    echo "version 1.3.3 is not supported and have a bug, use 1.3.2 or 1.3.4+"
+    exit 1
+fi
+
+$packer_exe build -timestamp-ui \
     -var subscription_id=$subscription_id \
     -var location=$location \
     -var resource_group=$images_rg \

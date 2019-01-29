@@ -2,7 +2,8 @@
 HPC_APPS_STORAGE_ENDPOINT="#HPC_APPS_STORAGE_ENDPOINT#"
 HPC_APPS_SASKEY="#HPC_APPS_SASKEY#"
 
-if [ "${vmSize,,}" = "standard_hb60rs" ]; then
+if [ "$VMSIZE" == "standard_hb60rs" ]
+then
     # Install OpenMPI
     if [ ! -d "/opt/openmpi" ]; then
         echo "download OpenMPI 4.0.x package"
@@ -14,7 +15,10 @@ if [ "${vmSize,,}" = "standard_hb60rs" ]; then
 
         popd
     fi
+fi
 
+if [ "$VMSIZE" == "standard_hb60rs" ] || [ "$VMSIZE" == "standard_hc44rs" ]
+then
     # check if IB is up
     status=$(ibv_devinfo | grep "state:")
     status=$(echo $status | cut -d' ' -f 2)

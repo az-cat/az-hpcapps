@@ -25,7 +25,8 @@ function read_secret {
     if [ "$MSI_ENDPOINT" = "" ]; then
         # check if we are running in an Azure VM
         compute=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq '.compute')
-        if [ "$compute" != "" ]; then
+        if [ $? == 0 ] && [ "$compute" != "" ]
+        then
             MSI_ENDPOINT="http://169.254.169.254/metadata/identity/oauth2/token"
         fi
     fi
@@ -33,8 +34,13 @@ function read_secret {
     echo "MSI_ENDPOINT=$MSI_ENDPOINT"
     if [ "$MSI_ENDPOINT" != "" ]; then
         token=$(curl -s -H Metadata:true "$MSI_ENDPOINT?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net" | jq -r '.access_token')
-        echo $token
-        read $1 <<< $(curl -s -H "Authorization: Bearer $token" https://$vault_name.vault.azure.net/secrets/$key_name?api-version=2016-10-01 | jq -r '.value')
+        echo "token is '$token'"
+        # if token is null then fallback on az cli
+        if [ "$token" != "null" ]; then
+            read $1 <<< $(curl -s -H "Authorization: Bearer $token" https://$vault_name.vault.azure.net/secrets/$key_name?api-version=2016-10-01 | jq -r '.value')
+        else
+            read $1 <<< $(az keyvault secret show --name $key_name --vault-name $vault_name | jq -r '.value')
+        fi
     else        
         read $1 <<< $(az keyvault secret show --name $key_name --vault-name $vault_name | jq -r '.value')
     fi
@@ -124,6 +130,7 @@ function wait_for_task {
             fi
             # task is finished, check if its succeeded or failed
             task_result=$(az batch task show --job-id ${job_id} --task-id ${taskid} --query "executionInfo.result" --output tsv)
+            echo "Task ${taskid} result is $task_result"
             if [ "$task_result" == "failure" ]; then
                 exit 1
             fi

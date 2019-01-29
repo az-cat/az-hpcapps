@@ -1,6 +1,6 @@
 {
     "id": "#TASK_ID#",
-    "commandLine": "bash -c 'batch_wrapper.sh run_#APP_SCRIPT#.sh #SCRIPT_FLAGS#'",
+    "commandLine": "bash -c 'batch_wrapper.sh run_#APP_SCRIPT#.sh \"#SCRIPT_FLAGS#\"'",
     "resourceFiles": [
         {
             "blobSource": "#RESULTS_ENDPOINT##RESULTS_CONTAINER#/#APP#/#JOB_ID#/scripts/run_#APP_SCRIPT#.sh?#RESULTS_SASKEY#",
@@ -37,7 +37,7 @@
         }
     ],
     "multiInstanceSettings": {
-        "numberOfInstances": #NUM_NODES#,
+        "numberOfInstances": "#NUM_NODES#",
         "coordinationCommandLine": "bash -c hostname"
     },
     "userIdentity": {
@@ -47,7 +47,6 @@
         }
     },
     "applicationPackageReferences": [
-        {"applicationId":"#APP#", "version":"latest"}
     ],
     "environmentSettings" : [
         {
@@ -73,6 +72,14 @@
         {
             "name": "STORAGE_ENDPOINT",
             "value": "#HPC_DATA_STORAGE_ENDPOINT#"
+        },
+        {
+            "name": "HPC_APPS_STORAGE_ENDPOINT",
+            "value": "#HPC_APPS_STORAGE_ENDPOINT#"
+        },
+        {
+            "name": "HPC_APPS_SASKEY",
+            "value": "#HPC_APPS_SASKEY#"
         },
         {
             "name": "ANALYTICS_WORKSPACE",

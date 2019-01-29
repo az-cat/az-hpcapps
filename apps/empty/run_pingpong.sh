@@ -18,7 +18,11 @@ if [ "$INTERCONNECT" == "ib" ]; then
     export I_MPI_DAPL_PROVIDER=ofa-v2-ib0
 elif [ "$INTERCONNECT" == "sriov" ]; then
     export I_MPI_FABRICS=shm:ofa
-    export I_MPI_PIN_PROCS=48
+    if [ "$VMSIZE" == "standard_hb60rs" ]; then
+        export I_MPI_PIN_PROCS=48
+    elif [ "$VMSIZE" == "standard_hc44rs" ]; then
+        export I_MPI_PIN_PROCS=43
+    fi
 else
     export I_MPI_FABRICS=shm:tcp
 fi

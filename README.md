@@ -89,12 +89,19 @@ Guide](https://docs.cyclecomputing.com/user-guide-launch).
 
 Before using these scripts, do the following:
 
-1.  It is highly recommended to use [Cloud Shell](https://azure.microsoft.com/en-us/features/cloud-shell/) which is the fastest way to start.
+1.  It is highly recommended to use [Cloud Shell](https://azure.microsoft.com/en-us/features/cloud-shell/) which is the fastest way to start. 
 
-> NOTE : If not using a Cloud Shell, Install [Azure CLI
-    2.0](https://docs.microsoft.com/cli/azure/?view=azure-cli-latest). If
-    running Bash on Windows, follow these
-    [instructions](https://www.michaelcrump.net/azure-cli-with-win10-bash/).
+> Notes:
+>
+>If you decide to use a centos VM then you will need to 
+>- install jq (yum install -y jq)
+>- install azure cli and do "az login"
+>    - https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
+>- install packer (As of this time we recommend that you install 1.2.5)
+>    - https://releases.hashicorp.com/packer/1.2.5/
+>
+>If running Bash on Windows, follow these
+>    [instructions](https://www.michaelcrump.net/azure-cli-with-win10-bash/).
 
 2.  Clone the repo:
 ```
@@ -315,6 +322,9 @@ To add a secret to Key Vault use this command :
 ``` 
 az keyvault secret set --vault-name 'Contoso-Vault2' --name 'ExamplePassword' --value 'Pa$$w0rd'
 ``` 
+
+> **Note**: Make sure you are granted read access to the KeyVault Secrets. Check the Access policies of the Key Vault to see if your account is listed there with the read/list access to secrets.
+>
 
 To learn more about Key Vault see the online documentation [here](https://docs.microsoft.com/en-us/azure/key-vault/)
 
@@ -583,10 +593,12 @@ application you want is not shown here, see the next section.
 | **Application**                                                          | **app-name**       | **Versions**   | **Shared FS** | **Licence** |
 |--------------------------------------------------------------------------|--------------------|----------------|---------------|-------------|
 | [Abaqus](./documentation/apps/abaqus.md)                                 | abaqus             | 2017           |    No         |  Yes        |
-| [ANSYS Mechanical](./documentation/apps/mechanical.md)                   | mechanical         | 18.2           |    No         |  Yes        |
-| [ANSYS Fluent](./documentation/apps/fluent.md)                           | fluent             | 18.2           |    No         |  Yes        |
+| [ANSYS Mechanical](./documentation/apps/mechanical.md)                   | mechanical         | 19.2           |    No         |  Yes        |
+| [ANSYS Fluent](./documentation/apps/fluent.md)                           | fluent             | 19.2           |    No         |  Yes        |
+| [Builder](./documentation/apps/builder.md) - *build scripts*             | builder            |                |    No         |  No         |
 | [Empty](./documentation/apps/empty.md) - *diagnostics*                   | empty              |                |    No         |  No         |
 | [Gromacs](./documentation/apps/gromacs.md)                               | gromacs            | 2018.1         |    Yes        |  No         |
+| [Linpack](./documentation/apps/empty.md)                                 | empty              | 2.3            |    No         |  No         |
 | [NAMD](./documentation/apps/namd.md)                                     | namd               | 2.10           |    No         |  No         |
 | [nwchem](./documentation/apps/nwchem.md)                                 | nwchem             | 6.8            |    Yes        |  No         |
 | [OpenFOAM](./documentation/apps/openfoam.md)                             | openfoam           | 4.x            |    Yes        |  No         |
@@ -643,6 +655,10 @@ following environment variables are available to use:
 | APPLICATION          | Application name                                    |
 | APP_PACKAGE_DIR      | Application package dir when using Batch Packages   |
 | CORES                | Number of MPI ranks                                 |
+| HPC_APPS_STORAGE_ENDPOINT | Application packages storage endpoint          |
+| HPC_APPS_SAS_KEY     | Application packages key                            |
+| HPC_DATA_SAS_KEY     | Application data SAS key                            |
+| HPC_DATA_STORAGE_ENDPOINT | Application data endpoint                      |
 | IB_PKEY              | Infiniband primary key                              |
 | INTERCONNECT         | Type of interconnect (**tcp**, **ib** or **sriov**) |
 | LICENSE_SERVER       | Hostname/IP address of the license server           |
@@ -652,10 +668,9 @@ following environment variables are available to use:
 | NODES                | Number of nodes for the task                        |
 | OUTPUT_DIR           | Directory for output that is uploaded               |
 | PPN                  | Number of processes per node to use                 |
-| SAS_KEY              | Application data SAS key                            |
 | SHARED_DIR           | Path to shared directory accessible by all nodes    |
-| STORAGE_ENDPOINT     | Application data endpoint                           |
 | UCX_IB_PKEY          | Infiniband primary key for UCX                      |
+| VMSIZE               | VM sku name in lower case (standard_h16r)           |
 
 ## MPI environment variables
 
@@ -736,7 +751,6 @@ The application catalog is growing regularly. Below is the list of what is curre
 - Converge CFD
 - GAMMES
 - LAMMPS
-- Linpack
 - Pamcrash
 - Quantum Espresso
 - StarCCM

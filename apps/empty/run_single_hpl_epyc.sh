@@ -79,9 +79,14 @@ mpi_options+=" --report-bindings"
 mpi_options+=" -x UCX_NET_DEVICES=mlx5_0:1 -x UCX_IB_PKEY=$UCX_IB_PKEY"
 
 output_file=${OUTPUT_DIR}/hpl.log
-MPI_ROOT=/opt/openmpi
+export MPI_HOME=/opt/openmpi
+export PATH=$PATH:$MPI_HOME/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MPI_HOME/lib
 
-$MPI_ROOT/bin/mpirun $mpi_options $APP_PACKAGE_DIR/hpl/xhpl_epyc | tee ${output_file}
+wget -q "${HPC_APPS_STORAGE_ENDPOINT}/hpl/xhpl_epyc?${HPC_APPS_SASKEY}" -O xhpl_epyc
+chmod +x xhpl_epyc
+
+mpirun $mpi_options xhpl_epyc | tee ${output_file}
 
 if [ -f "${output_file}" ]; then
     # keep input file

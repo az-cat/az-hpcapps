@@ -18,6 +18,10 @@ mkdir -p $SHARED_DIR
 APP_PACKAGE_DIR=AZ_BATCH_APP_PACKAGE_${APPLICATION}
 export APP_PACKAGE_DIR=${!APP_PACKAGE_DIR}/${APPLICATION}
 
+VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
+export VMSIZE=${VMSIZE,,}
+echo "vmSize is $VMSIZE"
+
 get_ib_pkey()
 {
     key0=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/0)
@@ -45,7 +49,7 @@ is_ib_dapl()
     return $?
 }
 
-#   On HB using SRIOV IB0  should be up
+#   On HB/HC using SRIOV IB0  should be up
 is_ib_sriov()
 {
     ip link show ib0 up
@@ -53,14 +57,15 @@ is_ib_sriov()
 }
 
 # Test IB device. 
-if [ is_ib_sriov ]; then
+if is_ib_sriov; then
     export INTERCONNECT=sriov
     get_ib_pkey
-elif [ is_ib_dapl ]; then
+elif is_ib_dapl; then
     export INTERCONNECT=ib
 else
     export INTERCONNECT=tcp
 fi
+
 
 chmod +x $1
 set -e

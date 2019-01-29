@@ -18,7 +18,7 @@
     "builders": [
         {
             "type": "azure-arm",
-  
+            "async_resourcegroup_delete": "true",
             "subscription_id": "{{user `subscription_id`}}",
             "tenant_id": "{{user `tenant_id`}}",
             "client_id": "{{user `client_id`}}",

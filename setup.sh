@@ -158,13 +158,14 @@ if is_not_set .service_principal.name; then
 fi
 
 if is_not_set .packer.executable; then
+    packer_version=1.3.2
     if [[ $(uname -r) =~ Microsoft$ ]]; then
         echo "Downloading Windows version of Packer"
-        packerzip=https://releases.hashicorp.com/packer/1.2.5/packer_1.2.5_windows_amd64.zip
+        packerzip=https://releases.hashicorp.com/packer/$packer_version/packer_${packer_version}_windows_amd64.zip
         jqstr+="|.packer.executable=\"bin/packer.exe\""
     else
         echo "Download Linux version of Packer"
-        packerzip=https://releases.hashicorp.com/packer/1.2.5/packer_1.2.5_linux_amd64.zip
+        packerzip=https://releases.hashicorp.com/packer/$packer_version/packer_${packer_version}_linux_amd64.zip
         jqstr+="|.packer.executable=\"bin/packer\""
     fi
     
@@ -179,19 +180,29 @@ fi
 
 if is_not_set .images.name; then
     echo "Select image/SKU to use:"
-    echo " - centos71   [ H16r ]"
-    echo " - centos74   [ H16r ]"
-    echo " - ubuntu1604 [ NC24r ]"
+    echo " - centos74    [ H16r   ]"
+    echo " - centos75_hb [ HB60rs ]"
+    echo " - centos75_hc [ HC44rs ]"
+    echo " - ubuntu1604  [ NC24r  ]"
     read image
     valid_image=1
     case "$image" in
-        centos71)
+        centos75_hb)
             packer_base_image="baseimage-centos.sh"
-            images_name="centos71"
+            images_name="centos75"
             images_publisher="OpenLogic"
-            images_offer="CentOS-HPC"
-            images_sku="7.1"
-            images_vm_size="STANDARD_H16R"
+            images_offer="CentOS"
+            images_sku="7.5"
+            images_vm_size="Standard_HB60rs"
+            images_nodeAgentSKUId="batch.node.centos 7"
+            ;;
+        centos75_hc)
+            packer_base_image="baseimage-centos.sh"
+            images_name="centos75"
+            images_publisher="OpenLogic"
+            images_offer="CentOS"
+            images_sku="7.5"
+            images_vm_size="Standard_HC44rs"
             images_nodeAgentSKUId="batch.node.centos 7"
             ;;
         centos74)

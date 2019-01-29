@@ -23,8 +23,11 @@ else
 	systemctl disable beegfs-client.service
 fi
 
-# check if running on HB
-vmSize=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
-if [ "${vmSize,,}" = "standard_hb60rs" ]; then
+# check if running on HB/HC
+VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
+VMSIZE=${VMSIZE,,}
+echo "vmSize is $VMSIZE"
+if [ "$VMSIZE" == "standard_hb60rs" ] || [ "$VMSIZE" == "standard_hc44rs" ]
+then
     ifconfig ib0 $(sed '/rdmaIPv4Address=/!d;s/.*rdmaIPv4Address="\([0-9.]*\)".*/\1/' /var/lib/waagent/SharedConfig.xml)/16
 fi

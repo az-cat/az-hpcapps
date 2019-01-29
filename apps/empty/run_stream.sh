@@ -1,11 +1,21 @@
 #!/bin/bash
 array_size=$1
-vmSize=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
-echo "vmSize is $vmSize"
 output_file=${OUTPUT_DIR}/stream.log
 
-if [ "${vmSize,,}" = "standard_hb60rs" ]; then
-    $APP_PACKAGE_DIR/Stream/stream_zen_double $1 0 1,5,9,13,17,21,25,29,33,37,41,45,49,53,57 | tee ${output_file}
+if [ "$VMSIZE" = "standard_hb60rs" ]; then
+    wget -q "${HPC_APPS_STORAGE_ENDPOINT}/bench/stream_zen_double?${HPC_APPS_SASKEY}" -O stream_zen_double
+    chmod +x stream_zen_double
+    export OMP_DISPLAY_ENV=TRUE
+    export OMP_NUM_THREADS=15
+    export OMP_PROC_BIND=SPREAD
+    export OMP_PLACES='{1},{5},{9},{13},{17},{21},{25},{29},{33},{37},{41},{45},{49},{53},{57}'
+    stream_zen_double | tee ${output_file}
+elif [ "$VMSIZE" = "standard_hc44rs" ]; then
+    export OMP_DISPLAY_ENV=TRUE
+    export OMP_PROC_BIND=SPREAD
+    wget -q "${HPC_APPS_STORAGE_ENDPOINT}/bench/stream_sky_double?${HPC_APPS_SASKEY}" -O stream_sky_double
+    chmod +x stream_sky_double
+    stream_sky_double | tee ${output_file}
 fi
 
 if [ -f "${output_file}" ]; then

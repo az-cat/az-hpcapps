@@ -11,28 +11,29 @@ script_flags=
 jobname=
 taskname=
 repeat=1
+identity="autouser/pool/nonadmin"
 
 function usage(){
     me=`basename $0`
     echo ""
     echo "Usage:"
     echo "$me -c config.json -a APPNAME "
-    echo "    -c: config file to use"
     echo "    -a: application (application list)"
+    echo "    -c: config file to use"
+    echo "    -h: help"
+    echo "    -i: identity : username or scope/elevation for batch auto user - scope: pool or task - elevation: admin or nonadmin"
     echo "    -j: job name (create job if not exists) - if not specified application name is used"
-    echo "    -t: task name - if not specified automatically built"
-    echo "    -s: script to run"
     echo "    -n: number of nodes"
-    echo "    -m: machine_size"
     echo "    -p: processes per node"
     echo "    -q: pool name (in order to force running a script on a specific pool)"
-    echo "    -x: script flags to pass"
     echo "    -r: repeat n times the same task"
-    echo "    -h: help"
+    echo "    -s: script to run"
+    echo "    -t: task name - if not specified automatically built"
+    echo "    -x: script flags to pass"
     echo ""
 }
 
-while getopts "a: c: s: n: m: p: q: x: r: j: t: h" OPTION
+while getopts "a: c: s: n: p: q: x: r: j: t: i: h" OPTION
 do
     case ${OPTION} in
         c)
@@ -53,9 +54,6 @@ do
         n)
         num_nodes=$OPTARG
             ;;
-        m)
-        machine_size=$OPTARG
-            ;;
         p)
         ppn=$OPTARG
             ;;
@@ -67,6 +65,9 @@ do
             ;;
         r)
         repeat=$OPTARG
+            ;;
+        i)
+        identity=$OPTARG
             ;;
         h)
         usage
@@ -102,9 +103,12 @@ echo "script flags: $script_flags"
 echo "job name: $jobname"
 echo "task name: $taskname"
 echo "repeat: $repeat"
+echo "identity: $identity"
 
 function fill_jobfile {
 
+    task_template_file=$DIR/batch/task-template.json
+    
     replace="s,#TASK_ID#,$task_id,g"
     replace+=";s,#JOB_ID#,$job_id,g"
     replace+=";s,#APP#,$app,g"
@@ -117,13 +121,27 @@ function fill_jobfile {
     replace+=";s,#LICSERVER#,$licserver,g"
     replace+=";s,#HPC_DATA_SASKEY#,$hpc_data_saskey,g"
     replace+=";s,#HPC_DATA_STORAGE_ENDPOINT#,${hpc_data_storage_endpoint},g"
+    replace+=";s,#HPC_APPS_STORAGE_ENDPOINT#,${hpc_apps_storage_endpoint},g"
+    replace+=";s,#HPC_APPS_SASKEY#,$hpc_apps_saskey,g"
     replace+=";s,#SCRIPT_FLAGS#,${script_flags},g"
     replace+=";s,#ANALYTICS_WORKSPACE#,${analytics_workspace},g"
     replace+=";s,#ANALYTICS_KEY#,${analytics_key},g"
+
+    user=$(echo $identity | cut -d'/' -f1)
+    if [ "${user,,}" = "autouser" ]; then
+        scope=$(echo $identity | cut -d'/' -f2)
+        elevation=$(echo $identity | cut -d'/' -f3)
+        autoUser=$(jq -c '.autoUser.scope=$scope | .autoUser.elevationLevel=$elevation' --arg scope "$scope" --arg elevation "$elevation" <<< "{}")
+        template=$(jq -c '.userIdentity=$autoUser' --argjson autoUser "$autoUser" <<< $(cat $task_template_file))
+    else
+        template=$(jq -c 'del(.userIdentity.autoUser) | .userIdentity.username=$user' --arg user "$user" <<< $(cat $task_template_file))        
+    fi
+
+
     # escape string for sed
     echo "Replace string: \"$replace\""
     replace=$(sed "s/\&/\\\&/g" <<< "$replace")
-    sed "$replace" $DIR/batch/task-template.json > ${task_id}.json
+    sed "$replace" <<< $(echo $template) > ${task_id}.json
 
 }
 
@@ -133,6 +151,8 @@ function create_jobfile {
     read_value results_storage_rg ".results.resource_group"
     read_value results_storage_name ".results.storage_account"
     read_value results_container ".results.container"
+    read_value app_storage_name ".appstorage.storage_account"
+    read_value app_container ".appstorage.app_container"
 
     create_rw_sas_key $results_storage_rg $results_storage_name $results_container
     results_saskey=$SAS_KEY
@@ -182,6 +202,19 @@ function create_jobfile {
 
     read_value analytics_workspace ".infrastructure.analytics.workspace"
     read_secret analytics_key ".infrastructure.analytics.key"
+
+    read_value hpc_apps_saskey ".appstorage.app_saskey"
+    if [ "$hpc_apps_saskey" == "" ]; then
+        read_value app_storage_rg ".appstorage.resource_group"
+        read_value app_storage_name ".appstorage.storage_account"
+        read_value app_container ".appstorage.app_container"
+        # Create input data SAS KEY
+        create_read_sas_key $app_storage_rg $app_storage_name $app_container
+        hpc_apps_saskey=$SAS_KEY
+    fi
+
+    hpc_apps_storage_endpoint="https://$app_storage_name.blob.core.windows.net/$app_container"
+    echo "HPC apps storage endpoint is $hpc_apps_storage_endpoint"
 
     fill_jobfile
 }
@@ -267,10 +300,7 @@ elif [ "$cluster_type" == "cyclecloud" ]; then
         exit 1
     fi
 
-    # Machine size defaults to H16r, unless specified
-    if [ -z $machine_size ];then
-        machine_size="Standard_H16r"
-    fi
+    read_value machine_size ".images.vm_size"
     command="submit_azbatch_task.py -a $app -b ~/appcatalog/${task_id}.json -i $image_id -p $ppn -n $num_nodes -m $machine_size"
 
     echo "Submmiting job in cluster: "

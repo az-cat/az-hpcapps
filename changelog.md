@@ -1,3 +1,20 @@
+### Version 1.6
+- Support HC44rs VM Type
+- Added builder application to build OSS applications
+- Added -u option for run_app to specify a Batch autoUser/scope/elevation value or a specific username
+- disable GSS proxy in the base image script for CentOS
+- Moved build_openmpi from empty to builder
+- Added build_hplamd, build_stream (for HB/HC) script to builder
+- Added the VMSIZE, HPC_APPS_STORAGE_ENDPOINT, HPC_APPS_SASKEY, UCX_IB_PKEY, IB_PKEY environment variables available when executing run scripts
+- Surround SCRIPT_FLAGS with " in task-template.json to allow passing SAS_KEY in params of scripts
+- Updated empty/run_single_hpl_epyc to use hpl built from build_hplamd and stored into blobs
+- Added run_stream script to empty that support HB and HC
+- Update WAAGENT when building the image
+- Upgrade LIS to version 4.2.8
+- disable cpupower and firewalld for all SKUs
+- use version 1.3.2 for packer as 1.3.3 has a bug for managed image
+
+
 ### Version 1.5
 - Use Key Vault to store secrets instead of clear values in configuration files
 - Support HB60rs VM Type

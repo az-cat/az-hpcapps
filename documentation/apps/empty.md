@@ -40,7 +40,7 @@ Example on how to run the ring ping pong test over 16 nodes :
 ```
     ./run_app.sh \
         -a empty \
-        -s ring_pingpong.sh \
+        -s ring_pingpong \
         -n 16 -p 1 
 ```
 
@@ -49,8 +49,8 @@ For running single HPL using 64 GB of memory for the problem size :
 ```
     ./run_app.sh \
         -a empty \
-        -s single_hpl_epyc.sh \
-        -n 1 -p 1 -x 64
+        -s single_hpl_epyc \
+        -n 1 -p 15 -x 64
 ```
 
 

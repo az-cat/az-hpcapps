@@ -45,7 +45,7 @@ if [ -f "$app_metrics" ]; then
     cluster_type=cycle
     app_perf=$(cat $app_metrics)
 
-    compute=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq '.compute')
+    compute=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2018-04-02" | jq '.compute')
     jq -n '.Compute=$compute | .Application=$app | .Nodes=$nodes | .ppn=$ppn | .cluster_type=$cluster_type | . += $app_perf' \
         --argjson compute "$compute" \
         --argjson app_perf "$app_perf" \

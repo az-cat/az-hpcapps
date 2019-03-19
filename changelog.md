@@ -1,3 +1,14 @@
+### Version 1.7
+- Added Centos76 support for HC/HB
+- Removed Centos75 support for HC/HB
+- Force packer 1.3.2 as 1.3.4 has a bug not using Premium_LRS for captured image
+- Added QE 6.3
+- Resolved: Use HTTPS instead of HTTP when accessing DATA storage
+- Resolved: Improve ERROR parsing from the output of image craeation 
+- Allow packer to use private IP only
+- Force waagent to version 2.2.36 which fix the IB0 not being set for HC/HB
+
+
 ### Version 1.6
 - Support HC44rs VM Type
 - Added builder application to build OSS applications

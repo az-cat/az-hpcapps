@@ -2,38 +2,22 @@
 
 config_file=$1
 vnetname=$2
+resource_group=$3
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 function usage(){
     me=`basename $0`
     echo ""
     echo "Usage:"
-    echo "$me config.json VNETname "
+    echo "$me config.json VNETname ResourceGroup"
     echo ""
 }
 
 
-if [ ! -f $config_file ] || [ -z $vnetname ];then
+if [ ! -f $config_file ] || [ -z $vnetname ] || [ -z $resource_group ];then
     usage
     exit 1
 fi
-
-function is_not_set {
-    val="$(jq -r $1 $config_file)"
-    [ "$val" = "NOT-SET" -o "$val" = "" ]
-}
-
-function read_value {
-    read $1 <<< $(jq -r "$2" $config_file)
-    #echo "read_value: $1=${!1}"
-}
-
-if is_not_set .resource_group; then
-    echo "Please set resource_group in config file first (try running setup.sh)."
-    exit 1
-fi
-
-read_value resource_group .resource_group
 
 rsaPublicKey=$(cat ~/.ssh/id_rsa.pub)
 

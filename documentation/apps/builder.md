@@ -33,7 +33,7 @@ Example on how to run the build_openmpi  :
 ```
     ./run_app.sh \
         -a builder \
-        -s build_openmpi.sh \
+        -s build_openmpi \
         -n 1 -p 1 \
         -x "write_sas_key_value"
 ```

@@ -18,7 +18,7 @@ mkdir -p $SHARED_DIR
 APP_PACKAGE_DIR=AZ_BATCH_APP_PACKAGE_${APPLICATION}
 export APP_PACKAGE_DIR=${!APP_PACKAGE_DIR}/${APPLICATION}
 
-VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
+VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2018-04-02" | jq -r '.compute.vmSize')
 export VMSIZE=${VMSIZE,,}
 echo "vmSize is $VMSIZE"
 
@@ -118,7 +118,7 @@ app_metrics=$APPLICATION.json
 if [ -f "$app_metrics" ]; then
 
     app_perf=$(cat $app_metrics)
-    compute=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq '.compute')
+    compute=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2018-04-02" | jq '.compute')
     jq -n '.Compute=$compute | .Application=$app | .Nodes=$nodes | .ppn=$ppn | .MPI=$mpi | . += $app_perf' \
         --argjson compute "$compute" \
         --argjson app_perf "$app_perf" \

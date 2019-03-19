@@ -1,0 +1,67 @@
+{
+    "variables": {
+        "subscription_id": "",
+        "location": "",
+        "resource_group": "",
+        "tenant_id": "",
+        "client_id": "",
+        "client_secret": "",
+        "image_name": "",
+        "image_publisher": "",
+        "image_offer": "",
+        "image_sku": "",
+        "vm_size": "",
+        "storage_account_type": "Premium_LRS",
+        "appinstaller": "",
+        "baseimage": "baseimage.sh"
+    },
+    "builders": [
+        {
+            "type": "azure-arm",
+            "async_resourcegroup_delete": "true",
+            "subscription_id": "{{user `subscription_id`}}",
+            "tenant_id": "{{user `tenant_id`}}",
+            "client_id": "{{user `client_id`}}",
+            "client_secret": "{{user `client_secret`}}",
+  
+			"image_publisher": "{{user `image_publisher`}}",
+			"image_offer": "{{user `image_offer`}}",
+			"image_sku": "{{user `image_sku`}}",
+
+            "managed_image_resource_group_name": "{{user `resource_group`}}",
+            "managed_image_name": "{{user `image_name`}}",
+            "managed_image_storage_account_type": "{{user `storage_account_type`}}",
+            
+            "os_type": "Linux",
+            "vm_size":  "{{user `vm_size`}}",
+            "ssh_pty": "true",
+  
+            "location": "{{user `location`}}"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "file",
+            "source": "{{user `baseimage`}}",
+            "destination": "/tmp/baseinstaller.sh"
+        },
+        {
+            "type": "file",
+            "source": "{{user `appinstaller`}}",
+            "destination": "/tmp/appinstaller.sh"
+        },
+        {
+            "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'",
+            "inline": [
+                "chmod +x /tmp/baseinstaller.sh",
+                "cat /tmp/appinstaller.sh >> /tmp/baseinstaller.sh",
+                "/tmp/baseinstaller.sh",
+                "/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync"
+            ],
+            "inline_shebang": "/bin/bash -e",
+            "type": "shell",
+            "skip_clean": true
+        }
+    ]
+}
+  

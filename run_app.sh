@@ -197,7 +197,7 @@ function create_jobfile {
         hpc_data_saskey=$SAS_KEY
     fi
     echo "HPC data SAS Key = $hpc_data_saskey"
-    hpc_data_storage_endpoint="http://$data_storage_name.blob.core.windows.net/$data_container"
+    hpc_data_storage_endpoint="https://$data_storage_name.blob.core.windows.net/$data_container"
     echo "HPC data storage endpoint is $hpc_data_storage_endpoint"
 
     read_value analytics_workspace ".infrastructure.analytics.workspace"

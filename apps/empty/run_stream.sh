@@ -1,5 +1,4 @@
 #!/bin/bash
-array_size=$1
 output_file=${OUTPUT_DIR}/stream.log
 
 if [ "$VMSIZE" = "standard_hb60rs" ]; then

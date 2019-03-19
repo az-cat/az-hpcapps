@@ -24,7 +24,7 @@ function read_secret {
     # if MSI_ENDPOINT is empty and if running in an Azure VM then update it to the local metadata endpoint
     if [ "$MSI_ENDPOINT" = "" ]; then
         # check if we are running in an Azure VM
-        compute=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq '.compute')
+        compute=$(curl --connect-timeout 10 -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2018-04-02" | jq '.compute')
         if [ $? == 0 ] && [ "$compute" != "" ]
         then
             MSI_ENDPOINT="http://169.254.169.254/metadata/identity/oauth2/token"
@@ -33,16 +33,16 @@ function read_secret {
 
     echo "MSI_ENDPOINT=$MSI_ENDPOINT"
     if [ "$MSI_ENDPOINT" != "" ]; then
-        token=$(curl -s -H Metadata:true "$MSI_ENDPOINT?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net" | jq -r '.access_token')
+        token=$(curl --connect-timeout 10 -s -H Metadata:true "$MSI_ENDPOINT?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net" | jq -r '.access_token')
         echo "token is '$token'"
         # if token is null then fallback on az cli
         if [ "$token" != "null" ]; then
-            read $1 <<< $(curl -s -H "Authorization: Bearer $token" https://$vault_name.vault.azure.net/secrets/$key_name?api-version=2016-10-01 | jq -r '.value')
+            read $1 <<< $(curl --connect-timeout 10 -s -H "Authorization: Bearer $token" https://$vault_name.vault.azure.net/secrets/$key_name?api-version=2016-10-01 | jq -r '.value')
         else
-            read $1 <<< $(az keyvault secret show --name $key_name --vault-name $vault_name | jq -r '.value')
+            read $1 <<< $(az keyvault secret show --name $key_name --vault-name $vault_name -o json | jq -r '.value')
         fi
     else        
-        read $1 <<< $(az keyvault secret show --name $key_name --vault-name $vault_name | jq -r '.value')
+        read $1 <<< $(az keyvault secret show --name $key_name --vault-name $vault_name -o json | jq -r '.value')
     fi
 
     echo "read_secret: $1=${!1}"
@@ -55,7 +55,7 @@ function read_secret {
 function azure_login {
     # do we use the service principal?
     read_value subscription_id ".subscription_id"
-    current_subscription="$(az account show | jq -r .id)"
+    current_subscription="$(az account show -o json | jq -r .id)"
     if [ "$current_subscription" != "$subscription_id" ]; then
 
         if [[ "$sp_client_id" = "" ]]; then

@@ -165,7 +165,7 @@ The NFS server is created with these properties:
 2.  Deploy the virtual network and the NFS server.
 
 ```
-    ./deploy_nfs.sh <resource_group> <vnet_name>
+    ./deploy_nfs.sh <config.json> <vnet_name> <resource_group>
 ```
 
   The admin account created for the NFS server is named **hpcadmin**, and your
@@ -243,7 +243,11 @@ config.json file with your values as explained in the sections below.
     "location": "",
     "packer": {
         "executable": "/bin/packer",
-        "base_image": "baseimage.sh"
+        "base_image": "baseimage.sh",
+        "private_only": "false",
+        "vnet_name": "",
+        "subnet_name": "",
+        "vnet_resource_group":""
     },
     "service_principal": {
         "tenant_id": "",
@@ -352,7 +356,11 @@ and update the executable value in config.json as follows:
 ```json
 "packer": {
     "executable": "bin/packer",
-    "base_image": "baseimage-centos.sh"
+    "base_image": "baseimage-centos.sh",
+    "private_only": "false",
+    "vnet_name": "",
+    "subnet_name": "",
+    "vnet_resource_group":""
 }
 ```
 
@@ -384,6 +392,9 @@ Using these output values, in config.json, update the values for **tenant_id**,
     "client_secret": "<keyvaultname>.spn-secret"
 }
 ```
+
+> By default Packer create a VM with a public IP and use it to SSH in and inject the configuration scripts. If you want to stay in a private network, you need to run the build_image.sh script within that VNET, set **private_only** to **true**, and specify values for **vnet_name**, **subnet_name** and **vnet_resource_group**.
+
 
 ## Store the images
 
@@ -602,6 +613,7 @@ application you want is not shown here, see the next section.
 | [NAMD](./documentation/apps/namd.md)                                     | namd               | 2.10           |    No         |  No         |
 | [nwchem](./documentation/apps/nwchem.md)                                 | nwchem             | 6.8            |    Yes        |  No         |
 | [OpenFOAM](./documentation/apps/openfoam.md)                             | openfoam           | 4.x            |    Yes        |  No         |
+| [Quantum Espresso](./documentation/apps/qe.md)                           | qe                 | ???            |    ???        |  No         |
 
 ## Add an application to the catalog
 
@@ -752,7 +764,6 @@ The application catalog is growing regularly. Below is the list of what is curre
 - GAMMES
 - LAMMPS
 - Pamcrash
-- Quantum Espresso
 - StarCCM
 
 To request other applications, send us a note as an issue in the repo.

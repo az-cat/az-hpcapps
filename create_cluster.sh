@@ -184,7 +184,7 @@ if [ "$cluster_type" == "batch" ]; then
     "commandLine":"bash ${start_task_file_name}",
     "resourceFiles": [
       {
-        "blobSource":"$start_task_source",
+        "httpUrl":"$start_task_source",
         "filePath":"${start_task_file_name}"
       }
     ],
@@ -433,7 +433,7 @@ EOF
 
         master_subnet="$vnet_rg/$vnet/$admin_subnet"
         compute_subnet="$vnet_rg/$vnet/$subnet"
-        compute_subnet_cidr=$(az network vnet subnet list -g $vnet_rg --vnet-name $vnet  --query "[?contains(name,'$subnet')]"  | jq '.[0]["addressPrefix"]' | sed 's/\"//g')
+        compute_subnet_cidr=$(az network vnet subnet list -g $vnet_rg --vnet-name $vnet  --query "[?contains(name,'$subnet')]" -o json | jq '.[0]["addressPrefix"]' | sed 's/\"//g')
 
 
         # create cluster

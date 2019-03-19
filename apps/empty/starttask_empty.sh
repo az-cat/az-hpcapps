@@ -16,15 +16,3 @@ then
         popd
     fi
 fi
-
-if [ "$VMSIZE" == "standard_hb60rs" ] || [ "$VMSIZE" == "standard_hc44rs" ]
-then
-    # check if IB is up
-    status=$(ibv_devinfo | grep "state:")
-    status=$(echo $status | cut -d' ' -f 2)
-    if [ "$status" = "PORT_DOWN" ]; then
-        echo "ERROR: IB is down"
-        ibv_devinfo 
-        exit 1
-    fi
-fi

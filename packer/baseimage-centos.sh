@@ -40,9 +40,6 @@ fi
 # turn off GSS proxy
 sed -i 's/GSS_USE_PROXY="yes"/GSS_USE_PROXY="no"/g' /etc/sysconfig/nfs
 
-# Don't require password for HPC user sudo
-echo "$USER ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
 # Disable tty requirement for sudo
 sed -i 's/^Defaults[ ]*requiretty/# Defaults requiretty/g' /etc/sudoers
 
@@ -60,6 +57,10 @@ SELINUX=disabled
 #       mls - Multi Level Security protection.
 SELINUXTYPE=targeted
 EOF
+
+# optimize
+systemctl disable cpupower
+systemctl disable firewalld
 
 install_beegfs_client()
 {
@@ -105,7 +106,7 @@ setup_intel_mpi_2018()
     source /opt/intel/impi/${VERSION}/bin64/mpivars.sh
 }
 
-install_mlx_ofed()
+install_mlx_ofed_centos75()
 {
     echo "*********************************************************"
     echo "*                                                       *"
@@ -147,6 +148,34 @@ install_mlx_ofed()
     fi
 }
 
+install_mlx_ofed_centos76()
+{
+    echo "*********************************************************"
+    echo "*                                                       *"
+    echo "*           Installing Mellanox OFED drivers            *" 
+    echo "*                                                       *"
+    echo "*********************************************************"
+
+    KERNEL=$(uname -r)
+    echo $KERNEL
+    yum install -y kernel-devel-${KERNEL} python-devel
+
+    yum install -y redhat-rpm-config rpm-build gcc-gfortran gcc-c++
+    yum install -y gtk2 atk cairo tcl tk createrepo
+    
+    wget --retry-connrefused \
+        --tries=3 \
+        --waitretry=5 \
+        http://content.mellanox.com/ofed/MLNX_OFED-4.5-1.0.1.0/MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64.tgz
+        
+    tar zxvf MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64.tgz
+    
+    ./MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64/mlnxofedinstall \
+        --add-kernel-support \
+        --skip-repo
+
+}
+
 upgrade_lis()
 {
     cd /mnt/resource
@@ -154,32 +183,53 @@ upgrade_lis()
     wget --retry-connrefused --read-timeout=10 https://aka.ms/lis
     tar xvzf lis
     pushd LISISO
-    ./upgrade.sh
+    ./install.sh
     popd
     set -e
 }
 
+update_waagent()
+{
+    /usr/sbin/waagent --version
+    # update WALA
+    #yum update -y WALinuxAgent
+    pushd /mnt/resource
+
+    yum install -y python-pip
+    python -m pip install --upgrade pip setuptools wheel
+    wget "https://github.com/Azure/WALinuxAgent/archive/v2.2.36.zip"
+    
+    unzip v2.2.36.zip
+    cd WALinuxAgent*
+    python setup.py install --register-service --force
+    sed -i -e 's/# OS.EnableRDMA=y/OS.EnableRDMA=y/g' /etc/waagent.conf
+    #sed -i -e 's/# AutoUpdate.Enabled=y/AutoUpdate.Enabled=y/g' /etc/waagent.conf
+    systemctl restart waagent
+
+    popd
+}
+
 # check if running on HB/HC
-VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
+VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2018-04-02" | jq -r '.compute.vmSize')
 VMSIZE=${VMSIZE,,}
 echo "vmSize is $VMSIZE"
 if [ "$VMSIZE" == "standard_hb60rs" ] || [ "$VMSIZE" == "standard_hc44rs" ]
 then
+    update_waagent
+
     set +e
     yum install -y numactl
-    install_mlx_ofed
+    install_mlx_ofed_centos76
+
+    echo 1 >/proc/sys/vm/zone_reclaim_mode
+    # AMD recommended 1 - however we had issues with some application, so 3 should be used.
+    echo "vm.zone_reclaim_mode = 3" >> /etc/sysctl.conf
+    sysctl -p
     set -e
+
+    upgrade_lis
 fi
 
-#upgrade_lis
-
-# update WALA
-yum update -y WALinuxAgent
-
-# optimize
-systemctl disable cpupower
-systemctl disable firewalld
-
-#install_beegfs_client
+ifconfig
 
 echo "End of base image "

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 fluent_case=$1
 start_time=$SECONDS
+iter=$2
 
 echo "downloading case ${fluent_case}..."
 wget -q "${STORAGE_ENDPOINT}/ansys-fluent-benchmarks/${fluent_case}.tar?${SAS_KEY}" -O - | tar x
@@ -32,8 +33,13 @@ echo "Cleaning up old processes"
 mpirun -ppn 1 -np $NODES --hostfile $MPI_HOSTFILE bash -c 'for proc in $(pgrep fluent_mpi); do kill -9 $proc; done'
 
 echo "Running Ansys Benchmark case : [${fluent_case}] on ${CORES} cores"
+iter_options=""
+if [ -n $iter ]; then
+    iter_options="-iter=$iter"
+fi
+
 export FLUENT_BENCH_CAS="./bench/fluent/v6/${fluent_case}/cas_dat/"
-fluentbench.pl ${fluent_case} -t${CORES} ${FLUENT_BENCH_OPTIONS} -mpi=intel -ssh -cnf=$MPI_MACHINEFILE
+fluentbench.pl ${fluent_case} -t${CORES} ${FLUENT_BENCH_OPTIONS} -mpi=intel -ssh -cnf=$MPI_MACHINEFILE $iter_options
 
 cp ${fluent_case}*.* ${OUTPUT_DIR}
 end_time=$SECONDS

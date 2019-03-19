@@ -127,7 +127,7 @@ if is_not_set .resource_group; then
 
     jqstr+="|.resource_group=\"$resource_group\""
 
-    update_config_file resource_group
+    #update_config_file resource_group
 fi
 echo ""
 echo "** Note: Azure Key Vault is used to store secrets"
@@ -138,7 +138,7 @@ echo -n "Enter the Key Vault Name: "
 read vault_name
 vault=$(az keyvault show --name $vault_name --output tsv)
 if [ "$vault" = "" ]; then
-    az keyvault create --name $vault_name --resource_group $resource_group
+    az keyvault create --name $vault_name --resource-group $resource_group
 fi
 
 if is_not_set .service_principal.name; then
@@ -181,27 +181,27 @@ fi
 if is_not_set .images.name; then
     echo "Select image/SKU to use:"
     echo " - centos74    [ H16r   ]"
-    echo " - centos75_hb [ HB60rs ]"
-    echo " - centos75_hc [ HC44rs ]"
+    echo " - centos76_hb [ HB60rs ]"
+    echo " - centos76_hc [ HC44rs ]"
     echo " - ubuntu1604  [ NC24r  ]"
     read image
     valid_image=1
     case "$image" in
-        centos75_hb)
+        centos76_hb)
             packer_base_image="baseimage-centos.sh"
-            images_name="centos75"
+            images_name="centos76"
             images_publisher="OpenLogic"
             images_offer="CentOS"
-            images_sku="7.5"
+            images_sku="7.6"
             images_vm_size="Standard_HB60rs"
             images_nodeAgentSKUId="batch.node.centos 7"
             ;;
-        centos75_hc)
+        centos76_hc)
             packer_base_image="baseimage-centos.sh"
-            images_name="centos75"
+            images_name="centos76"
             images_publisher="OpenLogic"
             images_offer="CentOS"
-            images_sku="7.5"
+            images_sku="7.6"
             images_vm_size="Standard_HC44rs"
             images_nodeAgentSKUId="batch.node.centos 7"
             ;;

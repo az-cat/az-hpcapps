@@ -23,11 +23,22 @@ else
 	systemctl disable beegfs-client.service
 fi
 
-# check if running on HB/HC
-VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
+# Get VM Size
+VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2018-04-02" | jq -r '.compute.vmSize')
 VMSIZE=${VMSIZE,,}
 echo "vmSize is $VMSIZE"
+ifconfig
+
 if [ "$VMSIZE" == "standard_hb60rs" ] || [ "$VMSIZE" == "standard_hc44rs" ]
 then
-    ifconfig ib0 $(sed '/rdmaIPv4Address=/!d;s/.*rdmaIPv4Address="\([0-9.]*\)".*/\1/' /var/lib/waagent/SharedConfig.xml)/16
+    # check if IB is up
+    status=$(ibv_devinfo | grep "state:")
+    status=$(echo $status | cut -d' ' -f 2)
+    if [ "$status" = "PORT_DOWN" ]; then
+        echo "ERROR: IB is down"
+        ibv_devinfo 
+        exit 1
+    fi
 fi
+
+# end of starttask_common

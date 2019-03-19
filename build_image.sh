@@ -51,6 +51,11 @@ read_value image_sku ".images.sku"
 read_value vm_size ".images.vm_size"
 read_value packer_exe ".packer.executable"
 read_value base_image ".packer.base_image"
+read_value private_only ".packer.private_only"
+read_value vnet_name ".packer.vnet_name"
+read_value subnet_name ".packer.subnet_name"
+read_value vnet_resource_group ".packer.vnet_resource_group"
+private_only=${private_only,,}
 
 timestamp=$(date +%Y%m%d-%H%M%S)
 
@@ -83,7 +88,7 @@ if [ "$exists" == "" ]; then
         --sku Standard_LRS \
         --location $location \
         --resource-group $images_rg \
-        --access-tier Hot \
+        --kind StorageV2 \
         --output table
     if [ $? != 0 ]; then
         echo "ERROR: Failed to storage account"
@@ -135,15 +140,22 @@ case "$vm_size" in
 esac
 echo "storage_account_type=$storage_account_type"
 
+private=""
+if [ "$private_only" == "yes" ]; then
+    private="private_"
+fi
+
+managed=""
 case $storage_account_type in
     "Premium_LRS")
-        packer_build_template=$DIR/packer/build.json
+        managed="managed"
         image_name=$app_img_name
         ;;
     "Standard_LRS")
-        packer_build_template=$DIR/packer/build_vhd.json
+        managed="unmanaged"
         ;;
 esac
+packer_build_template="$DIR/packer/build_${private}from_${managed}.json"
 echo "packer_build_template=$packer_build_template"
 
 # run packer
@@ -153,8 +165,8 @@ version=$($packer_exe --version)
 
 echo "running on packer version $version"
 
-if [ "$version" == "1.3.3" ]; then
-    echo "version 1.3.3 is not supported and have a bug, use 1.3.2 or 1.3.4+"
+if [ "$version" != "1.3.2" ]; then
+    echo "version $version is not supported and have bugs, please use 1.3.2"
     exit 1
 fi
 
@@ -175,6 +187,9 @@ $packer_exe build -timestamp-ui \
     -var baseimage=packer/$base_image \
     -var app_name=$app \
     -var storage_account=$images_storage \
+    -var vnet_name=$vnet_name \
+    -var subnet_name=$subnet_name \
+    -var vnet_resource_group=$vnet_resource_group \
     $packer_build_template \
     | tee $packer_log
 
@@ -185,7 +200,7 @@ fi
 
 rm $app_install_script
 
-errors=$(grep "ERROR" $packer_log)
+errors=$(grep -E " ERROR|^ERROR" $packer_log)
 echo "Testing errors : $errors"
 if [ "$errors" != "" ]; then
     echo "errors while creating the image"
@@ -215,6 +230,13 @@ if [ "$storage_account_type" == "Standard_LRS" ]; then
         echo "ERROR: Failed to create image"
         exit 1
     fi
+fi
+
+# check OS storage account type
+img_os_storage=$(az image show -g $images_rg --name $app_img_name | jq -r '.storageProfile.osDisk.storageAccountType')
+if [ "$storage_account_type" != "$img_os_storage" ]; then
+    echo "Wrong image OS storage account. $storage_account_type was expected instead of $img_os_storage"
+    exit 1
 fi
 
 rm $packer_log

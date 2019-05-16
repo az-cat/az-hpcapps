@@ -3,7 +3,10 @@ set -o errexit
 set -o pipefail
 
 # setup Intel MPI environment for Infiniband
-source /opt/intel/impi/*/bin64/mpivars.sh
+source /etc/profile # so we can load modules
+module load mpi/impi-2018.4.274
+source $MPI_BIN/mpivars.sh
+
 export I_MPI_DEBUG=6
 export MPI_ROOT=$I_MPI_ROOT
 export I_MPI_STATS=ipm

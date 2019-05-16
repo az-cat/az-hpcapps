@@ -1,13 +1,14 @@
 {
     "subscription_id": "NOT-SET",
     "location": "NOT-SET",
+    "resource_group": "NOT-SET",
     "packer": {
         "executable": "NOT-SET",
         "base_image": "NOT-SET",
         "private_only": "false",
-        "vnet_name": "",
-        "subnet_name": "",
-        "vnet_resource_group":""
+        "vnet_name": "NOT-SET",
+        "subnet_name": "compute",
+        "vnet_resource_group":"NOT-SET"
     },
     "service_principal": {
         "name": "NOT-SET",
@@ -25,17 +26,12 @@
         "vm_size": "NOT-SET",
         "nodeAgentSKUId": "NOT-SET"
     },
-    "cluster_type": "NOT-SET",
+    "cluster_type": "batch",
     "batch": {
         "resource_group": "NOT-SET",
         "account_name": "NOT-SET",
         "storage_account": "NOT-SET",
         "storage_container": "starttasks"
-    },
-    "cyclecloud": {
-        "resource_group": "NOT-SET",
-        "admin_password": "NOT-SET",
-        "admin_user": "NOT-SET"
     },
     "infrastructure": {
         "nfsserver": "NOT-SET",

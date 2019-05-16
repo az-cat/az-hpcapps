@@ -14,7 +14,7 @@ if [[ -z "#HPC_APPS_SASKEY#" ]]; then
     exit 1
 fi
 
-if [ ! -d "/opt/intel/impi" ]; then
-    setup_intel_mpi_2018    
+if [ ! -d "/opt/intel/impi/2018"* ]; then
+    setup_intel_mpi_2018
 fi
 

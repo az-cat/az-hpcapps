@@ -11,11 +11,9 @@ if [ "$INTERCONNECT" == "ib" ]; then
     export I_MPI_DAPL_PROVIDER=ofa-v2-ib0
     export I_MPI_DYNAMIC_CONNECTION=0
     export I_MPI_FALLBACK_DEVICE=0
-    export FLUENT_BENCH_OPTIONS="-pib.dapl"
 elif [ "$INTERCONNECT" == "sriov" ]; then
     export I_MPI_FABRICS=shm:ofa
     export I_MPI_FALLBACK_DEVICE=0
-    export FLUENT_BENCH_OPTIONS="-pinfiniband"
 else
     export I_MPI_FABRICS=shm:tcp
 fi
@@ -40,7 +38,7 @@ if [ -f "${OUTPUT_FILE}" ]; then
     "version": "$VERSION",
     "model": "$case_name",
     "compute_time": $compute_time,
-    "total_cpu_time": $total_cpu_time    
+    "total_cpu_time": $total_cpu_time
     }
 EOF
 fi

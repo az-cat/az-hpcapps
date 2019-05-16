@@ -1,4 +1,5 @@
 #!/bin/bash
+wait_time=$1
 output_file=${OUTPUT_DIR}/stream.log
 
 if [ "$VMSIZE" = "standard_hb60rs" ]; then
@@ -43,3 +44,6 @@ if [ -f "${output_file}" ]; then
 EOF
 fi
 
+if [ -n $wait_time ]; then
+    sleep $wait_time
+fi

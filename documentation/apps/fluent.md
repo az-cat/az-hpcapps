@@ -44,6 +44,7 @@ To run several cases use this :
         done
     done
 
+> **NOTE** : If you need to use Platform MPI, please add **pmpi** as a parameter to the script being called, after the **$case** name above.
 
 #### Tuning and workarounds
 

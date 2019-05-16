@@ -57,6 +57,7 @@ function create_storage_account {
         az storage account create \
             --name $sa \
             --sku Standard_LRS \
+            --kind StorageV2 \
             --location $loc \
             --resource-group $rg 
         if [ $? != 0 ]; then
@@ -103,11 +104,6 @@ az account set --subscription $subscription_id > $LOGDIR/az_account_set.log
 
 read_value location .location
 if is_not_set .location; then
-    echo ""
-    echo "** Note: If you intend to use CycleCloud, it runs in an Azure Container Instance"
-    echo "   and the only supported regions are: "
-    echo "   eastus, westus, westus2, westeurope, northeurope, and southeastasia"
-
     echo -n "Enter location (for anything new to be created in): "
     read location
     jqstr+="|.location=\"$location\""
@@ -122,16 +118,16 @@ if is_not_set .resource_group; then
 
     group_exists=$(az group exists -n $resource_group)
     if [ "$group_exists" = "false" ];then
-        az group create -n $resource_group --location "$location"
+        az group create --name $resource_group --location "$location"
     fi
 
     jqstr+="|.resource_group=\"$resource_group\""
 
-    #update_config_file resource_group
+    update_config_file resource_group
 fi
 echo ""
 echo "** Note: Azure Key Vault is used to store secrets"
-echo "   If you sepcify an existing Vault, this script will add secrets in it"
+echo "   If you specify an existing Vault, this script will add secrets in it"
 echo "   If the Vault doesn't exists, it will create one for you"
 
 echo -n "Enter the Key Vault Name: "
@@ -179,11 +175,10 @@ fi
 
 
 if is_not_set .images.name; then
-    echo "Select image/SKU to use:"
-    echo " - centos74    [ H16r   ]"
-    echo " - centos76_hb [ HB60rs ]"
-    echo " - centos76_hc [ HC44rs ]"
-    echo " - ubuntu1604  [ NC24r  ]"
+    echo "Enter image/SKU to use:"
+    echo " - centos74    for H16r"
+    echo " - centos76_hb for HB60rs"
+    echo " - centos76_hc for HC44rs"
     read image
     valid_image=1
     case "$image" in
@@ -252,8 +247,8 @@ fi
 
 read_value cluster_type .cluster_type
 if is_not_set .cluster_type; then
-    echo -n "Select \"batch\" or \"cyclecloud\": "
-    read cluster_type
+    cluster_type="batch"
+
     jqstr+="|.cluster_type=\"$cluster_type\""
 
     update_config_file cluster_type
@@ -292,25 +287,6 @@ if [ "$cluster_type" = "batch" ]; then
         update_config_file batch_account
     fi
     
-
-elif [ "$cluster_type" = "cyclecloud" ]; then
-    if is_not_set .cyclecloud.resource_group; then
-        echo -n "Enter resource group to run AzureCycleCloud and clusters in: "
-        read cyclecloud_resource_group
-        jqstr+="|.cyclecloud.resource_group=\"$cyclecloud_resource_group\""
-    fi
-
-    if is_not_set .cyclecloud.admin_user; then
-        admin_user=$(whoami)
-        jqstr+="|.cyclecloud.admin_user=\"$admin_user\""
-    fi
-
-    if is_not_set .cyclecloud.admin_password; then
-        read_value admin_password .service_principal.client_secret
-        jqstr+="|.cyclecloud.admin_password=\"$admin_password\""
-    fi
-
-    update_config_file cyclecloud
 else
     echo "Unknown cluster type ($cluster_type)."
 fi
@@ -377,6 +353,14 @@ if is_not_set .appstorage.storage_account; then
     echo "Warning: You do not have anything set for app storage."
     echo "         You must either create a copy installers/test data."
     echo "         Alternatively obtain account details and SAS key existing one."
+
+    echo -n "Enter the storage account to be created for apps: "
+    read sa
+    create_storage_account $sa $resource_group $location
+    jqstr+="|.appstorage.storage_account=\"$sa\""
+    jqstr+="|.appstorage.resource_group=\"$resource_group\""
+    
+    update_config_file apps_storage
 fi
 
 if is_not_set .results.storage_account; then

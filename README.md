@@ -1,8 +1,7 @@
 # Guidance and framework for running HPC applications on Azure
 
 This repository provides automation scripts for creating [Azure
-Batch](https://azure.microsoft.com/services/batch/) pools and Azure CycleCloud
-clusters that you can use to run common high-performance
+Batch](https://azure.microsoft.com/services/batch/) pools that you can use to run common high-performance
 computing (HPC) applications. This repo also serves as a catalog of HPC
 applications that you can use for testing. More than a dozen common
 HPC applications are currently supported, including several ANSYS solvers and
@@ -12,7 +11,6 @@ Star-CCM+, and you can add more as needed as described in this guide.
 
 - [Overview](#overview)
     - [Azure Batch considerations](#azure-batch-considerations)
-    - [Azure CycleCloud considerations](#azure-cyclecloud-considerations)
 - [Prerequisites](#prerequisites)
     - [Set up NFS server and network](#set-up-nfs-server-and-virtual-network)
     - [Create site-to-site VPN](#create-site-to-site-vpn)
@@ -38,9 +36,7 @@ Star-CCM+, and you can add more as needed as described in this guide.
 # Overview
 
 The goal of this repo is to help you set up an environment in Azure
-using either [Azure Batch](https://azure.microsoft.com/services/batch/) pools or
-[Azure CycleCloud](https://cyclecomputing.com/products-solutions/cyclecloud/)
-clusters. These compute job scheduling services connect to an HPC application
+using either [Azure Batch](https://azure.microsoft.com/services/batch/) pools. These compute job scheduling services connect to an HPC application
 and run it efficiently on Azure so you can perform tests.
 
 As the following figure shows, this readme describes a three-step approach:
@@ -49,7 +45,7 @@ As the following figure shows, this readme describes a three-step approach:
     Packer](https://www.packer.io/), an open source tool for creating build
     images. Custom images are stored in separate infrastructure blobs.
 
-2.  Create a Batch pool or CycleCloud cluster to automate the creation of the
+2.  Create a Batch pool to automate the creation of the
     compute nodes (virtual machines) used to run your HPC application.
 
 3.  Run the application. Pools of virtual machines are created with a custom
@@ -65,25 +61,6 @@ Batch creates and manages a pool of virtual machines , installs the applications
 you want to run, and schedules jobs to run on the nodes. You only pay for the
 underlying resources consumed, such as the virtual machines, storage, and
 networking. 
-
-## Azure CycleCloud considerations
-
-CycleCloud is cluster manager software that requires a one-time license. The
-CycleCloud application server must be provisioned separately, a step that is
-automated by the [deployment template](https://github.com/az-cat/az-hpcapps).
-
-CycleCloud also installs and configures a scheduler—GridEngine in this case. You
-can use the automation scripts to set up two types of environments:
-
--   A single GridEngine cluster capable of running all the apps in the HPC
-    application catalog. Do this when you want to create one environment and use
-    it for running all the HPC applications. The cluster accepts Azure
-    Batch task files and translates them into GridEngine jobs.
-
--   A GridEngine cluster for a specific HPC application.
-
-For more information, see the [CycleCloud User
-Guide](https://docs.cyclecomputing.com/user-guide-launch).
 
 # Fast start
 
@@ -157,10 +134,7 @@ The NFS server is created with these properties:
     az group create --location <location> --name <resource_group>
 ```
 
-- If using Azure Batch, the resource group by default is the one that includes
-  your Batch account. 
-- If using CycleCloud, the virtual machine and the cluster are deployed in that
-  virtual network, and the cluster mounts that NFS server.
+For Azure Batch, the resource group by default is the one that includes your Batch account. 
 
 2.  Deploy the virtual network and the NFS server.
 
@@ -168,14 +142,12 @@ The NFS server is created with these properties:
     ./deploy_nfs.sh <config.json> <vnet_name> <resource_group>
 ```
 
-  The admin account created for the NFS server is named **hpcadmin**, and your
-  local public SSH key located here will be used for authentication. After the
-  script is run, the full DNS name of the virtual machine is displayed.
+The admin account created for the NFS server is named **hpcadmin** and your local public SSH key located here will be used for authentication. After the script is run, the full DNS name of the virtual machine is displayed.
 
 ## Create site-to-site VPN
 
 If your HPC application needs a license server, make sure it can be accessed
-from the virtual machines in the Batch pools or CycleCloud clusters. We used
+from the virtual machines in the Batch pools. We used
 site-to-site VPN to connect the license servers located in the different
 subscriptions to the compute and batch resources. We considered using virtual
 network peering, but found it impractical in this scenario since it needs
@@ -270,11 +242,6 @@ config.json file with your values as explained in the sections below.
         "account_name": "",
         "storage_account": "",
         "storage_container": "starttasks"
-    },
-    "cyclecloud": {
-        "resource_group": "",
-        "storage_account": "",
-        "admin_password": "<keyvaultname>.cycle-password"
     },
     "infrastructure": {
         "nfsserver": "10.0.2.4",
@@ -426,26 +393,22 @@ In config.json, update the values in the **images** section:
 "images": {
     "resource_group": "my-images-here",
     "storage_account": "myimageshere",
-    "name": "centos74",
+    "name": "centos76",
     "publisher": "OpenLogic",
     "offer": "CentOS-HPC",
-    "sku": "7.4",
-    "vm_size": "STANDARD_H16R",
+    "sku": "7.6",
+    "vm_size": "STANDARD_HC44RS",
     "nodeAgentSKUId": "batch.node.centos 7"
 }
 ```
 
 ## Specify the cluster type
 
-
-Depending on whether you use Azure Batch or Azure CycleCloud, set the cluster
-type to be `batch` or `cyclecloud` in config.json:
-
 ```
     "cluster_type": "batch",
 ```
 
-If using Azure Batch, specify the resource group containing the Batch account,
+Specify the resource group containing the Batch account,
 the name of the Batch account, and the name of the storage account linked to the
 Batch account. If you don't have a Batch account, use these
 [instructions](https://docs.microsoft.com/azure/batch/batch-account-create-portal)
@@ -460,22 +423,6 @@ to create one.
 }
 ```
 
-If using Azure CycleCloud, specify the resource group containing the account,
-the name of the storage account linked to the CycleCloud account, and the logon
-credentials. The admin_password has to be stored in KeyVault. For example:
-
-```json
-"cyclecloud": {
-    "resource_group": "cyclecloud-rg",
-    "storage_account": "cyclecloudstorage",
-    "admin_password": "<keyvaultname>.cycle-password"
-}
-```
-
-> **NOTE:** You do not need to provision a CycleCloud virtual machine in
-> advance. The **create_cluster.sh** script looks for a CycleCloud installation
-> named appcatalog, and if it doesn’t find one, it provisions, installs, and
-> sets up the virtual machine.
 
 ## Identify infrastructure addresses
 
@@ -571,16 +518,14 @@ To run a specific HPC application, do the following:
     ./build_image.sh -a app-name
 ```
 
-2.  Create a virtual machine pool for Batch or a cluster for CycleCloud by
-    running the following script, replacing **app-name** with the value
-    documented in the [table](#set-up-an-hpc-application) below:
+2.  Create a virtual machine pool for Batch running the following script, replacing **app-name** with the value documented in the [table](#set-up-an-hpc-application) below:
 
 ```
     ./create_cluster.sh -a app-name
 ```
 
 3.  After the Azure Batch pool is created, scale it to the number of nodes you
-    want to run on. (Note that CycleCloud does this automatically). To scale a
+    want to run on. To scale a
     pool, use Azure portal or [Batch Explorer](https://github.com/Azure/BatchExplorer).
 
 4.  Run the HPC application you want as the following section
@@ -592,7 +537,6 @@ To run a specific HPC application, do the following:
             -n nodes -p process_per_node \
             -x script_options
 ```
-
 
 
 ## Set up an HPC application 
@@ -613,7 +557,8 @@ application you want is not shown here, see the next section.
 | [NAMD](./documentation/apps/namd.md)                                     | namd               | 2.10           |    No         |  No         |
 | [nwchem](./documentation/apps/nwchem.md)                                 | nwchem             | 6.8            |    Yes        |  No         |
 | [OpenFOAM](./documentation/apps/openfoam.md)                             | openfoam           | 4.x            |    Yes        |  No         |
-| [Quantum Espresso](./documentation/apps/qe.md)                           | qe                 | ???            |    ???        |  No         |
+| [Pamcrash](./documentation/apps/pamcrash.md)                             | pamcrash           | 2017 2018      |    No         |  Yes        |
+| [Quantum Espresso](./documentation/apps/qe.md)                           | qe                 | 6.3            |    Yes        |  No         |
 
 ## Add an application to the catalog
 
@@ -712,12 +657,17 @@ arguments:
 -genv I_MPI_DAPL_TRANSLATION_CACHE 0
 ```
 
-When using **HB60rs** use these settings :
+When using **HB** or **HC** use these settings :
 
 ```
 -genv I_MPI_FABRICS shm:ofa
 -genv I_MPI_DYNAMIC_CONNECTION 0
 ```
+
+### Platform MPI
+
+Download the Platform MPI installation package **platform_mpi-09.01.04.03r-ce.bin** from https://www.ibm.com/developerworks/downloads/im/mpi/index.html, and upload it in your APPS (.appstorage.storage_account) storage account inside the virtual directory **apps/platformmpi-941** 
+
 
 
 ## Log data
@@ -763,7 +713,6 @@ The application catalog is growing regularly. Below is the list of what is curre
 - Converge CFD
 - GAMMES
 - LAMMPS
-- Pamcrash
 - StarCCM
 
 To request other applications, send us a note as an issue in the repo.

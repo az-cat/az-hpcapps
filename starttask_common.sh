@@ -33,6 +33,11 @@ if [ "$VMSIZE" == "standard_hb60rs" ] || [ "$VMSIZE" == "standard_hc44rs" ]
 then
     # check if IB is up
     status=$(ibv_devinfo | grep "state:")
+    if [ $? != 0 ]; then
+        echo "ERROR: Failed to get IB device"
+        exit 1
+    fi
+
     status=$(echo $status | cut -d' ' -f 2)
     if [ "$status" = "PORT_DOWN" ]; then
         echo "ERROR: IB is down"

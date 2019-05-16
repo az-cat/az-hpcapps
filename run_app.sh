@@ -264,50 +264,6 @@ if [ "$cluster_type" == "batch" ]; then
     echo "Job ID: $job_id"
     rm ${task_id}.json
 
-elif [ "$cluster_type" == "cyclecloud" ]; then
-    echo "Running app in the Cycle GridEngine Cluster"
-    create_jobfile
-
-    if ! which cyclecloud > /dev/null ;then
-    PATH=$HOME/bin:./bin:$PATH
-    fi
-
-    rsaPublicKey="$HOME/.ssh/id_rsa.pub"
-    if [ ! -f $rsaPublicKey ]; then
-        echo "No public ssh key found ($rsaPublicKey)."
-        echo "Run ssh-key with all default options and re-run this script."
-        exit 1
-    fi
-
-    cluster_ip=$(cyclecloud show_nodes master -c appcatalog_gridengine --format json | jq '.[0]["Instance"]["PublicIp"]' | sed 's/\"//g')
-    scp ${task_id}.json $cluster_ip:appcatalog/
-
-
-    # images names are tagged with the node Sku
-    get_pool_id $app
-    pool_id=$POOL_ID
-
-    read_value image_rg ".images.resource_group"
-    image_id=$(az image list \
-        --resource-group $image_rg \
-        --query "[?contains(name,'$pool_id-')].[name,id]" \
-        --output tsv \
-        | sort | tail -n1 | cut -d$'\t' -f2)
-    echo "$app image: $image_id"
-
-    if [ -z $image_id ];then
-        echo "Unable to locate image for app $app"
-        exit 1
-    fi
-
-    read_value machine_size ".images.vm_size"
-    command="submit_azbatch_task.py -a $app -b ~/appcatalog/${task_id}.json -i $image_id -p $ppn -n $num_nodes -m $machine_size"
-
-    echo "Submmiting job in cluster: "
-    echo "$command"
-    ssh $cluster_ip "cd ~/appcatalog/; $command"
-    rm -f ${task_id}.json
-
 else
     echo "Unknown cluster type"
 fi

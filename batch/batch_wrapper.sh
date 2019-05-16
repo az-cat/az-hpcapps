@@ -95,7 +95,9 @@ send_to_loganalytics() {
     string_to_hash="POST\n${content_len}\napplication/json\nx-ms-date:${rfc1123date}\n/api/logs"
     utf8_to_hash=$(echo -n "$string_to_hash" | iconv -t utf8)
 
-    signature="$(echo -ne "$utf8_to_hash" | openssl dgst -sha256 -hmac "$(echo "$key" | base64 --decode)" -binary | base64)"
+    decoded_hex_key="$(echo "$key" | base64 --decode --wrap=0 | xxd -p -c256)"
+    signature="$(echo -ne "$utf8_to_hash" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$decoded_hex_key" -binary | base64 --wrap=0)"
+
     auth_token="SharedKey $workspace_id:$signature"
 
     curl   -s -S \

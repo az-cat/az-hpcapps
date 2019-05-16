@@ -1,3 +1,12 @@
+### Version 1.8
+- Fix setup.sh
+- Added Platform MPI support for Fluent
+- Support CentOS-HPC 7.6 image
+- Removed CycleCloud
+- Added modules for Intel MPI 2018
+- Use modules in the empty app
+- Added Pamcrash
+
 ### Version 1.7
 - Added Centos76 support for HC/HB
 - Removed Centos75 support for HC/HB
